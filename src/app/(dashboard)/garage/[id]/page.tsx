@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { formatDate } from "@/lib/utils";
 import { EditVehicleForm } from "@/components/EditVehicleForm";
 import { AddRefuelForm } from "@/components/AddRefuelForm";
 import { AddMaintenanceForm } from "@/components/AddMaintenanceForm";
@@ -148,7 +149,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .slice(0, 15)
                 .map(log => (
-                  <div key={log.id} className={`px-6 py-4 flex items-center justify-between hover:bg-muted/10 transition ${log.type_group === 'maintenance' ? 'border-l-4 border-l-orange-500/50' : ''}`}>
+                  <div key={log.id} className={`px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between hover:bg-muted/10 transition ${log.type_group === 'maintenance' ? 'border-l-4 border-l-orange-500/50' : ''}`}>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{log.type_group === 'refuel' ? '⛽' : '🔧'}</span>
@@ -162,7 +163,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground ml-7">{new Date(log.date).toLocaleDateString()} · {log.odometer.toLocaleString()} km</p>
+                      <p suppressHydrationWarning className="text-xs text-muted-foreground ml-7">{formatDate(log.date)} · {log.odometer.toLocaleString()} km</p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <div className="text-right">

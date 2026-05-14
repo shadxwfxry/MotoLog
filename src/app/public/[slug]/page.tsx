@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import { formatDate } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const vehicle = await prisma.vehicle.findUnique({
@@ -46,7 +47,7 @@ export default async function PublicVehiclePage({ params }: { params: { slug: st
         {vehicle.maintenanceLogs.map(log => (
           <li key={log.id} className="border p-4 rounded-lg bg-card">
             <p className="font-medium">{log.type}</p>
-            <p className="text-sm text-muted-foreground">{log.date.toLocaleDateString()} at {log.odometer} km</p>
+            <p suppressHydrationWarning className="text-sm text-muted-foreground">{formatDate(log.date)} at {log.odometer} km</p>
           </li>
         ))}
         {vehicle.maintenanceLogs.length === 0 && <p>No maintenance logs.</p>}
@@ -57,7 +58,7 @@ export default async function PublicVehiclePage({ params }: { params: { slug: st
         {vehicle.refuelingLogs.map(log => (
           <li key={log.id} className="border p-4 rounded-lg bg-card">
             <p className="font-medium">{log.liters} L - ${log.cost}</p>
-            <p className="text-sm text-muted-foreground">{log.date.toLocaleDateString()} at {log.odometer} km</p>
+            <p suppressHydrationWarning className="text-sm text-muted-foreground">{formatDate(log.date)} at {log.odometer} km</p>
           </li>
         ))}
         {vehicle.refuelingLogs.length === 0 && <p>No refueling logs.</p>}

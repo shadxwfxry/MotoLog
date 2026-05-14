@@ -73,3 +73,15 @@
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 2px; }
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Custom screen for very small devices */
+@media (max-width: 400px) {
+  .xs\:block { display: block !important; }
+  .hidden { display: none !important; }
+}

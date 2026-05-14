@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { addPlannedMaintenance, completePlannedMaintenance, deletePlannedMaintenance } from "@/lib/actions/maintenance";
 import { useLanguage } from "./LanguageProvider";
+import { formatDate } from "@/lib/utils";
 
 type Reminder = {
   id: string;
@@ -116,7 +117,7 @@ export function RemindersSection({
                       </p>
                     )}
                     {r.targetDate && (
-                      <p className="text-xs mt-0.5">📅 {new Date(r.targetDate).toLocaleDateString()}</p>
+                      <p suppressHydrationWarning className="text-xs mt-0.5">📅 {formatDate(r.targetDate)}</p>
                     )}
                     {r.intervalKm && (
                       <p className="text-xs mt-0.5 opacity-70">↻ every {r.intervalKm.toLocaleString()} km</p>

@@ -2,6 +2,7 @@
 
 import { useLanguage } from "@/components/LanguageProvider";
 import { SmartSearch } from "@/components/SmartSearch";
+import { formatDate } from "@/lib/utils";
 
 type MotoNews = {
   title: string;
@@ -39,7 +40,7 @@ export function HomeClient({ news, refuels, maintenance }: Props) {
           <div className="grid gap-4 md:grid-cols-2">
              {news.map((item, i) => (
                <a key={i} href={item.link} target="_blank" className="block p-5 bg-card border border-border rounded-2xl hover:border-primary/50 transition-all group shadow-sm">
-                  <p className="text-[10px] font-bold text-primary uppercase mb-2">{item.source} · {new Date(item.pubDate).toLocaleDateString()}</p>
+                  <p suppressHydrationWarning className="text-[10px] font-bold text-primary uppercase mb-2">{item.source} · {formatDate(item.pubDate)}</p>
                   <h3 className="text-base font-bold mb-2 group-hover:text-primary transition-colors leading-tight">{item.title}</h3>
                   <p className="text-sm text-muted-foreground line-clamp-3">{item.contentSnippet}</p>
                </a>

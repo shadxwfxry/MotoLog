@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
+import { formatDate } from "@/lib/utils";
 
 interface LogEntry {
   id: string;
@@ -21,8 +22,6 @@ interface SmartSearchProps {
   refuels: any[];
   maintenance: any[];
 }
-
-const AI_TRIGGER_WORDS = ["сколько", "я", "заправил", "литров", "бензин", "когда", "потратил", "последний раз", "масло", "цена", "стоило"];
 
 export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
   const { t } = useLanguage();
@@ -101,18 +100,6 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
     }
   };
 
-  const handleSmartAction = () => {
-    if (!query.trim()) return;
-    const lowerQ = query.toLowerCase();
-    const shouldTriggerAi = AI_TRIGGER_WORDS.some(word => lowerQ.includes(word));
-    
-    if (shouldTriggerAi) {
-      handleAiSearch();
-    } else {
-      handleWebSearch();
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="relative">
@@ -121,13 +108,15 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
           value={query}
           onChange={(e) => { 
             setQuery(e.target.value); 
-            setAiResult(null); 
-            setWebResults(null);
+            if (!e.target.value.trim()) {
+              setAiResult(null); 
+              setWebResults(null);
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              handleSmartAction();
+              handleWebSearch();
             }
           }}
           placeholder={t("ask_ai_placeholder") || "Search logs, web, or ask AI..."}
@@ -138,10 +127,10 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
           
           {query.trim() ? (
             <>
-              {/* Web/Smart Search Button */}
+              {/* Web Search Button */}
               <button 
                 type="button"
-                onClick={handleSmartAction}
+                onClick={handleWebSearch}
                 className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl transition-colors"
                 title="Search Web"
               >
@@ -153,7 +142,7 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
                 type="button"
                 onClick={handleAiSearch}
                 className="p-2 text-primary hover:bg-primary/10 rounded-xl transition-colors"
-                title="Force Ask AI"
+                title="Ask AI"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
               </button>
@@ -181,7 +170,16 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
 
           {webResults && (
             <div className="space-y-4">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">🌐 Web Results</h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">🌐 Web Results</h4>
+                <a 
+                  href={`https://www.google.com/search?q=${encodeURIComponent(query)}`} 
+                  target="_blank" 
+                  className="text-[10px] text-primary hover:underline font-bold"
+                >
+                  Open in Google →
+                </a>
+              </div>
               {webResults.length > 0 ? (
                 <div className="grid gap-3">
                   {webResults.map((item, idx) => (
@@ -192,7 +190,16 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground py-4">No results found on the web.</p>
+                <div className="text-center py-8 space-y-3 bg-muted/20 rounded-xl border border-dashed border-border">
+                  <p className="text-sm text-muted-foreground">Internal search returned no results.</p>
+                  <a 
+                    href={`https://www.google.com/search?q=${encodeURIComponent(query)}`} 
+                    target="_blank" 
+                    className="inline-block py-2 px-6 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all"
+                  >
+                    Try Search on Google
+                  </a>
+                </div>
               )}
             </div>
           )}
@@ -209,7 +216,7 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
                     <div key={item.id} className="text-xs bg-muted/50 p-3 rounded-xl border border-border/50 hover:border-primary/30 transition-colors">
                       <div className="flex justify-between mb-1">
                         <span className="font-bold text-primary uppercase text-[9px]">{item.type}</span>
-                        <span className="text-muted-foreground">{new Date(item.date).toLocaleDateString()}</span>
+                        <span suppressHydrationWarning className="text-muted-foreground">{formatDate(item.date)}</span>
                       </div>
                       <p className="font-medium">{item.vehicle.make} {item.vehicle.model}: {item.content}</p>
                     </div>
