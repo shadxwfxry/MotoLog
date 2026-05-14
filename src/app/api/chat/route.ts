@@ -10,21 +10,47 @@ export async function POST(req: Request) {
 
   const { query } = await req.json();
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email as string },
-    include: { vehicles: { include: { refuelingLogs: true, maintenanceLogs: true } } }
+  const vehicles = await prisma.vehicle.findMany({
+    where: { userId: session.user.id },
+    select: { id: true, make: true, model: true }
   });
+  
+  const vehicleIds = vehicles.map(v => v.id);
 
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  const [recentRefuels, recentMaint] = await Promise.all([
+    prisma.refuelingLog.findMany({
+      where: { vehicleId: { in: vehicleIds } },
+      orderBy: { date: "desc" },
+      take: 25,
+      include: { vehicle: { select: { make: true, model: true } } }
+    }),
+    prisma.maintenanceLog.findMany({
+      where: { vehicleId: { in: vehicleIds } },
+      orderBy: { date: "desc" },
+      take: 25,
+      include: { vehicle: { select: { make: true, model: true } } }
+    })
+  ]);
 
   const localResults: any[] = [];
 
-  user.vehicles.forEach((v: any) => {
-    v.refuelingLogs.forEach((log: any) => {
-      localResults.push({ type: "refuel", vehicle: `${v.make} ${v.model}`, date: log.date, content: `Station: ${log.stationName || "Unknown"}, Cost: ${log.cost}, Liters: ${log.liters}, Odo: ${log.odometer}`, raw: log });
+  recentRefuels.forEach((log: any) => {
+    localResults.push({ 
+      type: "refuel", 
+      vehicle: `${log.vehicle.make} ${log.vehicle.model}`, 
+      date: log.date, 
+      content: `Station: ${log.stationName || "Unknown"}, Cost: ${log.cost}, Liters: ${log.liters}, Odo: ${log.odometer}`, 
+      raw: log 
     });
-    v.maintenanceLogs.forEach((log: any) => {
-      localResults.push({ type: "maintenance", vehicle: `${v.make} ${v.model}`, date: log.date, content: `${log.type}: ${log.description || "No description"}, Cost: ${log.cost}, Odo: ${log.odometer}`, raw: log });
+  });
+
+  recentMaint.forEach((log: any) => {
+    localResults.push({ 
+      type: "maintenance", 
+      vehicle: `${log.vehicle.make} ${log.vehicle.model}`, 
+      date: log.date, 
+      content: `${log.type}: ${log.description || "No description"}, Cost: ${log.cost}, Odo: ${log.odometer}`, 
+      raw: log 
     });
   });
 

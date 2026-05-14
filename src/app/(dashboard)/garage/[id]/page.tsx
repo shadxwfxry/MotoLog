@@ -23,41 +23,46 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
       userId: session.user.id 
     },
     include: {
-      refuelingLogs: { orderBy: { date: "desc" } },
-      maintenanceLogs: { orderBy: { date: "desc" } },
+      refuelingLogs: { orderBy: { date: "desc" }, take: 15 },
+      maintenanceLogs: { orderBy: { date: "desc" }, take: 15 },
       plannedMaintenances: { orderBy: { isCompleted: "asc" } },
     },
   });
 
   if (!vehicle) notFound();
 
-  const [maintStats, allRefuels] = await Promise.all([
+  const [maintStats, fuelStats, firstRefuel] = await Promise.all([
     prisma.maintenanceLog.aggregate({
       where: { vehicleId: vehicle.id },
       _sum: { cost: true }
     }),
-    prisma.refuelingLog.findMany({
+    prisma.refuelingLog.aggregate({
       where: { vehicleId: vehicle.id },
-      select: { odometer: true, liters: true, cost: true },
-      orderBy: { odometer: "asc" }
+      _sum: { cost: true, liters: true },
+      _min: { odometer: true },
+      _max: { odometer: true },
+      _count: true
+    }),
+    prisma.refuelingLog.findFirst({
+      where: { vehicleId: vehicle.id },
+      orderBy: { odometer: "asc" },
+      select: { liters: true }
     })
   ]);
 
   const maintTotal = maintStats._sum.cost || 0;
-  const fuelTotal = allRefuels.reduce((s, r) => s + r.cost, 0);
+  const fuelTotal = fuelStats._sum.cost || 0;
 
   let avgConsumption: number | null = null;
-  if (allRefuels.length >= 2) {
-    const totalKm = allRefuels[allRefuels.length - 1].odometer - allRefuels[0].odometer;
-    const totalLiters = allRefuels.slice(1).reduce((s, l) => s + l.liters, 0);
+  if (fuelStats._count >= 2) {
+    const totalKm = (fuelStats._max.odometer || 0) - (fuelStats._min.odometer || 0);
+    const totalLiters = (fuelStats._sum.liters || 0) - (firstRefuel?.liters || 0);
     if (totalKm > 0) {
       avgConsumption = (totalLiters / totalKm) * 100;
     }
   }
 
-  const currentOdometer = allRefuels.length > 0 
-    ? allRefuels[allRefuels.length - 1].odometer 
-    : 0;
+  const currentOdometer = fuelStats._max.odometer || 0;
 
   return (
     <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6">

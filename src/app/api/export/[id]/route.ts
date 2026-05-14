@@ -3,6 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const sanitizeCSV = (str: string | number | null) => {
+  if (str === null || str === undefined) return "";
+  const stringified = String(str).replace(/"/g, '""');
+  // If starts with dangerous characters (=, +, -, @), prepend an apostrophe for safety against CSV Injection
+  return /^[=+\-@]/.test(stringified) ? `'${stringified}` : stringified;
+};
+
 export async function GET(
   req: Request,
   { params }: { params: { id: string } }
@@ -41,7 +48,7 @@ export async function GET(
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   logs.forEach(l => {
-    csv += `"${l.date.toLocaleDateString()}","${l.type}","${l.odo}","${l.desc.replace(/"/g, '""')}","${l.cost}"\n`;
+    csv += `"${l.date.toLocaleDateString()}","${sanitizeCSV(l.type)}","${l.odo}","${sanitizeCSV(l.desc)}","${l.cost}"\n`;
   });
 
   return new NextResponse(csv, {
