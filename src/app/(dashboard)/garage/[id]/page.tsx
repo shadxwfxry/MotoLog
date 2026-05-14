@@ -16,38 +16,53 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
+  // 1. Fetch basic info and LATEST 10 logs for display (Optimized take)
   const vehicle = await prisma.vehicle.findUnique({
     where: { 
       id: params.id,
       userId: session.user.id 
     },
     include: {
-      refuelingLogs: { orderBy: { date: "desc" } },
-      maintenanceLogs: { orderBy: { date: "desc" } },
+      refuelingLogs: { orderBy: { date: "desc" }, take: 10 },
+      maintenanceLogs: { orderBy: { date: "desc" }, take: 10 },
       plannedMaintenances: { orderBy: { isCompleted: "asc" } },
     },
   });
 
   if (!vehicle) notFound();
 
-  // ── Fuel stats ──
-  const refuels = vehicle.refuelingLogs;
+  // 2. Aggregate stats directly in DB (Memory efficient)
+  const [maintStats, allRefuels] = await Promise.all([
+    prisma.maintenanceLog.aggregate({
+      where: { vehicleId: vehicle.id },
+      _sum: { cost: true }
+    }),
+    prisma.refuelingLog.findMany({
+      where: { vehicleId: vehicle.id },
+      select: { odometer: true, liters: true, cost: true },
+      orderBy: { odometer: "asc" }
+    })
+  ]);
+
+  const maintTotal = maintStats._sum.cost || 0;
+
+  // 3. Calculate consumption
   let avgConsumption: number | null = null;
   let costPerKm: number | null = null;
 
-  if (refuels.length >= 2) {
-    const sorted = [...refuels].sort((a, b) => a.odometer - b.odometer);
-    const totalKm = sorted[sorted.length - 1].odometer - sorted[0].odometer;
-    const totalLiters = sorted.slice(1).reduce((s, l) => s + l.liters, 0);
-    const totalCost = sorted.reduce((s, l) => s + l.cost, 0);
+  if (allRefuels.length >= 2) {
+    const totalKm = allRefuels[allRefuels.length - 1].odometer - allRefuels[0].odometer;
+    const totalLiters = allRefuels.slice(1).reduce((s, l) => s + l.liters, 0);
+    const totalCost = allRefuels.reduce((s, l) => s + l.cost, 0);
     if (totalKm > 0) {
       avgConsumption = (totalLiters / totalKm) * 100;
       costPerKm = totalCost / totalKm;
     }
   }
 
-  const currentOdometer = refuels[0]?.odometer ?? 0;
-  const maintTotal = vehicle.maintenanceLogs.reduce((s, l) => s + l.cost, 0);
+  const currentOdometer = allRefuels.length > 0 
+    ? allRefuels[allRefuels.length - 1].odometer 
+    : 0;
 
   return (
     <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6">
@@ -120,7 +135,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
             <div className="p-0">
               <div className="divide-y divide-border">
                 {/* Refuels */}
-                {vehicle.refuelingLogs.slice(0, 5).map(log => (
+                {vehicle.refuelingLogs.map(log => (
                   <div key={log.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted/10 transition">
                     <div>
                       <div className="flex items-center gap-2">
@@ -141,7 +156,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                 ))}
                 
                 {/* Maintenance */}
-                {vehicle.maintenanceLogs.slice(0, 5).map(log => (
+                {vehicle.maintenanceLogs.map(log => (
                   <div key={log.id} className="px-6 py-4 flex items-center justify-between hover:bg-muted/10 transition border-l-4 border-l-orange-500/50">
                     <div>
                       <div className="flex items-center gap-2">
@@ -161,6 +176,12 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                     </div>
                   </div>
                 ))}
+
+                {(vehicle.refuelingLogs.length === 0 && vehicle.maintenanceLogs.length === 0) && (
+                  <div className="px-6 py-12 text-center text-muted-foreground italic text-sm">
+                    No history records yet.
+                  </div>
+                )}
               </div>
             </div>
           </div>

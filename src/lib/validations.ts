@@ -8,7 +8,7 @@ export const vehicleSchema = z.object({
   power: z.preprocess((val) => val ? parseInt(val as string, 10) : null, z.number().nullable().optional()),
   weight: z.preprocess((val) => val ? parseInt(val as string, 10) : null, z.number().nullable().optional()),
   type: z.string().optional(),
-  isPublic: z.preprocess((val) => val === "true" || val === true, z.boolean()).optional(),
+  isPublic: z.preprocess((val) => val === "true" || val === "on" || val === true, z.boolean()).optional(),
 });
 
 export const refuelSchema = z.object({
@@ -19,7 +19,7 @@ export const refuelSchema = z.object({
   stationName: z.string().nullable().optional(),
   fuelGrade: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
-  isPublic: z.preprocess((val) => val === "true" || val === true, z.boolean()).optional(),
+  isPublic: z.preprocess((val) => val === "true" || val === "on" || val === true, z.boolean()).optional(),
 });
 
 export const maintenanceSchema = z.object({
@@ -28,7 +28,7 @@ export const maintenanceSchema = z.object({
   type: z.string().min(1, "Type is required"),
   cost: z.preprocess((val) => parseFloat(val as string), z.number().min(0)),
   description: z.string().nullable().optional(),
-  isPublic: z.preprocess((val) => val === "true" || val === true, z.boolean()).optional(),
+  isPublic: z.preprocess((val) => val === "true" || val === "on" || val === true, z.boolean()).optional(),
 });
 
 export const plannedMaintenanceSchema = z.object({

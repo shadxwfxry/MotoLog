@@ -13,7 +13,7 @@ export async function addMaintenanceLog(vehicleId: string, formData: FormData) {
   const validation = maintenanceSchema.safeParse(data);
 
   if (!validation.success) {
-    throw new Error(validation.error.errors[0].message);
+    throw new Error(validation.error.issues[0].message);
   }
 
   await prisma.maintenanceLog.create({
@@ -31,11 +31,17 @@ export async function addMaintenanceLog(vehicleId: string, formData: FormData) {
 export async function deleteMaintenanceLog(logId: string) {
   const user = await getAuthUser();
   
-  const log = await prisma.maintenanceLog.delete({
+  const log = await prisma.maintenanceLog.findFirst({
     where: {
       id: logId,
       vehicle: { userId: user.id }
     }
+  });
+
+  if (!log) throw new Error("Log not found or access denied");
+
+  await prisma.maintenanceLog.delete({
+    where: { id: logId }
   });
 
   revalidatePath("/garage");
@@ -46,11 +52,17 @@ export async function deleteMaintenanceLog(logId: string) {
 export async function toggleMaintenancePublic(logId: string, isPublic: boolean) {
   const user = await getAuthUser();
   
-  const log = await prisma.maintenanceLog.update({
+  const log = await prisma.maintenanceLog.findFirst({
     where: {
       id: logId,
       vehicle: { userId: user.id }
-    },
+    }
+  });
+
+  if (!log) throw new Error("Log not found or access denied");
+
+  await prisma.maintenanceLog.update({
+    where: { id: logId },
     data: { isPublic }
   });
 
@@ -65,7 +77,7 @@ export async function addPlannedMaintenance(vehicleId: string, formData: FormDat
   const validation = plannedMaintenanceSchema.safeParse(data);
 
   if (!validation.success) {
-    throw new Error(validation.error.errors[0].message);
+    throw new Error(validation.error.issues[0].message);
   }
 
   await prisma.plannedMaintenance.create({
@@ -82,26 +94,38 @@ export async function addPlannedMaintenance(vehicleId: string, formData: FormDat
 export async function completePlannedMaintenance(id: string) {
   const user = await getAuthUser();
   
-  const updated = await prisma.plannedMaintenance.update({
+  const result = await prisma.plannedMaintenance.updateMany({
     where: { 
       id,
       vehicle: { userId: user.id } 
     },
     data: { isCompleted: true },
   });
+
+  if (result.count === 0) throw new Error("Not found");
+
+  const item = await prisma.plannedMaintenance.findUnique({ where: { id } });
+
   revalidatePath("/garage");
-  revalidatePath(`/garage/${updated.vehicleId}`);
+  revalidatePath(`/garage/${item?.vehicleId}`);
 }
 
 export async function deletePlannedMaintenance(id: string) {
   const user = await getAuthUser();
   
-  const deleted = await prisma.plannedMaintenance.delete({ 
+  const deleted = await prisma.plannedMaintenance.findFirst({ 
     where: { 
       id,
       vehicle: { userId: user.id } 
     } 
   });
+
+  if (!deleted) throw new Error("Not found");
+
+  await prisma.plannedMaintenance.delete({
+    where: { id }
+  });
+
   revalidatePath("/garage");
   revalidatePath(`/garage/${deleted.vehicleId}`);
 }

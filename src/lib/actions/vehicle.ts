@@ -13,7 +13,7 @@ export async function addVehicle(formData: FormData) {
   const validation = vehicleSchema.safeParse(data);
   
   if (!validation.success) {
-    throw new Error(validation.error.errors[0].message);
+    throw new Error(validation.error.issues[0].message);
   }
 
   await prisma.vehicle.create({
@@ -33,16 +33,21 @@ export async function updateVehicleCharacteristics(vehicleId: string, formData: 
   const validation = vehicleSchema.safeParse(data);
   
   if (!validation.success) {
-    throw new Error(validation.error.errors[0].message);
+    throw new Error(validation.error.issues[0].message);
   }
 
-  await prisma.vehicle.update({
+  // Use updateMany to allow filtering by userId without unique constraint on it
+  const result = await prisma.vehicle.updateMany({
     where: { 
       id: vehicleId,
       userId: user.id 
     },
     data: validation.data,
   });
+
+  if (result.count === 0) {
+    throw new Error("Vehicle not found or access denied");
+  }
   
   revalidatePath("/garage");
   revalidatePath(`/garage/${vehicleId}`);
@@ -51,12 +56,21 @@ export async function updateVehicleCharacteristics(vehicleId: string, formData: 
 export async function deleteVehicle(vehicleId: string) {
   const user = await getAuthUser();
   
-  await prisma.vehicle.delete({
-    where: {
-      id: vehicleId,
-      userId: user.id
+  try {
+    // deleteMany allows filtering by non-unique fields like userId
+    const result = await prisma.vehicle.deleteMany({
+      where: {
+        id: vehicleId,
+        userId: user.id
+      }
+    });
+    if (result.count === 0) {
+      throw new Error("Vehicle not found or access denied");
     }
-  });
+  } catch (error) {
+    console.error("Delete vehicle error:", error);
+    throw new Error("Failed to delete vehicle.");
+  }
   
   revalidatePath("/garage");
   redirect("/garage");
@@ -65,22 +79,21 @@ export async function deleteVehicle(vehicleId: string) {
 export async function clearVehicleStats(vehicleId: string) {
   const user = await getAuthUser();
   
-  // Verify ownership first since we're deleting related records manually or via cascade
-  // Actually deleteMany with where is safe if we include userId in the relation check
-  
-  await prisma.refuelingLog.deleteMany({
-    where: {
-      vehicleId,
-      vehicle: { userId: user.id }
-    }
-  });
-  
-  await prisma.maintenanceLog.deleteMany({
-    where: {
-      vehicleId,
-      vehicle: { userId: user.id }
-    }
-  });
+  // Use transaction to ensure atomicity
+  await prisma.$transaction([
+    prisma.refuelingLog.deleteMany({
+      where: {
+        vehicleId,
+        vehicle: { userId: user.id }
+      }
+    }),
+    prisma.maintenanceLog.deleteMany({
+      where: {
+        vehicleId,
+        vehicle: { userId: user.id }
+      }
+    })
+  ]);
   
   revalidatePath("/garage");
   revalidatePath(`/garage/${vehicleId}`);
