@@ -175,9 +175,9 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
                 <a 
                   href={`https://www.google.com/search?q=${encodeURIComponent(query)}`} 
                   target="_blank" 
-                  className="text-[10px] text-primary hover:underline font-bold"
+                  className="text-[10px] text-primary hover:underline font-bold bg-primary/10 px-2 py-1 rounded-md"
                 >
-                  Open in Google →
+                  Search in Google →
                 </a>
               </div>
               {webResults.length > 0 ? (
@@ -190,14 +190,20 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 space-y-3 bg-muted/20 rounded-xl border border-dashed border-border">
-                  <p className="text-sm text-muted-foreground">Internal search returned no results.</p>
+                <div className="text-center py-8 space-y-4 bg-muted/20 rounded-2xl border-2 border-dashed border-border">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center opacity-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold">No internal results</p>
+                    <p className="text-xs text-muted-foreground">DuckDuckGo results are limited. Try the global search.</p>
+                  </div>
                   <a 
                     href={`https://www.google.com/search?q=${encodeURIComponent(query)}`} 
                     target="_blank" 
-                    className="inline-block py-2 px-6 rounded-full bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-all"
+                    className="inline-block py-2.5 px-8 rounded-xl bg-primary text-primary-foreground text-xs font-black hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 uppercase tracking-widest"
                   >
-                    Try Search on Google
+                    Open Google Search
                   </a>
                 </div>
               )}

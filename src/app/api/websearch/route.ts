@@ -5,29 +5,37 @@ export async function POST(req: Request) {
   if (!query) return NextResponse.json({ results: [] });
 
   try {
-    const response = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
+    // Using a slightly different DDG endpoint and more "human-like" headers
+    const response = await fetch(`https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://duckduckgo.com/",
+        "Upgrade-Insecure-Requests": "1"
       }
     });
+
+    if (!response.ok) throw new Error("Search engine error");
 
     const html = await response.text();
     const results: any[] = [];
 
-    // Simple RegEx parser to extract DuckDuckGo results without relying on Cheerio/Undici which breaks Webpack
-    const resultBlocks = html.split('class="result ').slice(1, 6); // Get top 5 results
+    // More resilient parsing: look for result containers
+    const resultMatches = html.matchAll(/<div class="[^"]*result[^"]*">([\s\S]*?)<\/div>/g);
+    
+    for (const match of resultMatches) {
+      const block = match[1];
+      
+      // Extract title and link
+      const titleMatch = block.match(/<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/);
+      if (!titleMatch) continue;
 
-    for (const block of resultBlocks) {
-      // Extract title
-      const titleMatch = block.match(/<h2 class="result__title">[\s\S]*?<a[^>]*>([\s\S]*?)<\/a>/);
-      let title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : "";
-
-      // Extract link
-      const linkMatch = block.match(/<a class="result__url" href="([^"]+)"/);
-      let link = linkMatch ? linkMatch[1] : "";
+      let link = titleMatch[1];
+      let title = titleMatch[2].replace(/<[^>]+>/g, '').trim();
 
       // Extract snippet
-      const snippetMatch = block.match(/<a class="result__snippet[^>]*>([\s\S]*?)<\/a>/);
+      const snippetMatch = block.match(/<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/);
       let snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]+>/g, '').trim() : "";
 
       // Clean DuckDuckGo redirect link
@@ -38,9 +46,12 @@ export async function POST(req: Request) {
         } catch(e) {}
       }
 
-      if (title && link) {
+      // Filter out non-results (like ads or internal links)
+      if (title && link && !link.includes("duckduckgo.com/")) {
         results.push({ title, link, snippet });
       }
+
+      if (results.length >= 5) break;
     }
 
     return NextResponse.json({ results });

@@ -111,42 +111,42 @@ export function DashboardClient({ refuels, maintenance }: Props) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-         {/* ── By Vehicle ── */}
-         <div className="rounded-2xl border border-border bg-card p-5">
-           <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">🏍 {t("by_vehicle")}</h2>
-           <div className="space-y-4">
-             {Object.entries(vehicleMap).map(([name, d]) => (
-               <div key={name}>
-                 <div className="flex justify-between text-sm mb-1">
-                   <span className="font-medium">{name}</span>
-                   <span className="font-bold">{(d.fuel + d.maint).toFixed(0)} ₴</span>
-                 </div>
-                 <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden flex">
-                   <div className="bg-primary h-full" style={{ width: `${(d.fuel / (d.fuel + d.maint || 1)) * 100}%` }} />
-                   <div className="bg-orange-500 h-full" style={{ width: `${(d.maint / (d.fuel + d.maint || 1)) * 100}%` }} />
-                 </div>
-               </div>
-             ))}
-           </div>
-         </div>
+        {/* ── By Vehicle ── */}
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">🏍 {t("by_vehicle")}</h2>
+          <div className="space-y-4">
+            {Object.entries(vehicleMap).map(([name, d]) => (
+              <div key={name}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="font-medium">{name}</span>
+                  <span className="font-bold">{(d.fuel + d.maint).toFixed(0)} ₴</span>
+                </div>
+                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden flex">
+                  <div className="bg-primary h-full" style={{ width: `${(d.fuel / (d.fuel + d.maint || 1)) * 100}%` }} />
+                  <div className="bg-orange-500 h-full" style={{ width: `${(d.maint / (d.fuel + d.maint || 1)) * 100}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-         {/* ── Maintenance category breakdown ── */}
-         {Object.keys(categoryMap).length > 0 && (
-           <div className="rounded-2xl border border-border bg-card p-5">
-             <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">🔧 {t("by_category")}</h2>
-             <div className="space-y-3">
-               {Object.entries(categoryMap).map(([cat, d]) => (
-                 <div key={cat} className="flex items-center justify-between">
-                   <div className="flex items-center gap-2">
-                     <span className={`text-sm font-medium ${catColor[cat] ?? ""}`}>{catLabel[cat] ?? cat}</span>
-                     <span className="text-xs text-muted-foreground">×{d.count}</span>
-                   </div>
-                   <span className="font-semibold">{d.cost.toFixed(0)} ₴</span>
-                 </div>
-               ))}
-             </div>
-           </div>
-         )}
+        {/* ── Maintenance category breakdown ── */}
+        {Object.keys(categoryMap).length > 0 && (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">🔧 {t("by_category")}</h2>
+            <div className="space-y-3">
+              {Object.entries(categoryMap).map(([cat, d]) => (
+                <div key={cat} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-medium ${catColor[cat] ?? ""}`}>{catLabel[cat] ?? cat}</span>
+                    <span className="text-xs text-muted-foreground">×{d.count}</span>
+                  </div>
+                  <span className="font-semibold">{d.cost.toFixed(0)} ₴</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
