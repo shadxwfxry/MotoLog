@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     where: { userId: session.user.id },
     select: { id: true, make: true, model: true }
   });
-  
+
   const vehicleIds = vehicles.map(v => v.id);
 
   const [recentRefuels, recentMaint] = await Promise.all([
@@ -35,22 +35,22 @@ export async function POST(req: Request) {
   const localResults: any[] = [];
 
   recentRefuels.forEach((log: any) => {
-    localResults.push({ 
-      type: "refuel", 
-      vehicle: `${log.vehicle.make} ${log.vehicle.model}`, 
-      date: log.date, 
-      content: `Station: ${log.stationName || "Unknown"}, Cost: ${log.cost}, Liters: ${log.liters}, Odo: ${log.odometer}`, 
-      raw: log 
+    localResults.push({
+      type: "refuel",
+      vehicle: `${log.vehicle.make} ${log.vehicle.model}`,
+      date: log.date,
+      content: `Station: ${log.stationName || "Unknown"}, Cost: ${log.cost}, Liters: ${log.liters}, Odo: ${log.odometer}`,
+      raw: log
     });
   });
 
   recentMaint.forEach((log: any) => {
-    localResults.push({ 
-      type: "maintenance", 
-      vehicle: `${log.vehicle.make} ${log.vehicle.model}`, 
-      date: log.date, 
-      content: `${log.type}: ${log.description || "No description"}, Cost: ${log.cost}, Odo: ${log.odometer}`, 
-      raw: log 
+    localResults.push({
+      type: "maintenance",
+      vehicle: `${log.vehicle.make} ${log.vehicle.model}`,
+      date: log.date,
+      content: `${log.type}: ${log.description || "No description"}, Cost: ${log.cost}, Odo: ${log.odometer}`,
+      raw: log
     });
   });
 
@@ -64,8 +64,8 @@ export async function POST(req: Request) {
   if (apiKey && apiKey.trim().length > 10) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-pro",
+      const model = genAI.getGenerativeModel({
+        model: "gemini-stable-release",
       });
 
       const prompt = `You are MotoAssistant, an expert motorcycle AI mechanic.
