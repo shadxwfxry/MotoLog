@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addPlannedMaintenance, completePlannedMaintenance, deletePlannedMaintenance } from "@/app/actions";
+import { addPlannedMaintenance, completePlannedMaintenance, deletePlannedMaintenance } from "@/lib/actions/maintenance";
 import { useLanguage } from "./LanguageProvider";
 
 type Reminder = {

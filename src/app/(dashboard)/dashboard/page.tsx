@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { DashboardClient } from "@/app/dashboard/DashboardClient";
+import { DashboardClient } from "./DashboardClient";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,10 @@ export default async function DashboardPage() {
     prisma.maintenanceLog.findMany({
       where: { vehicleId: { in: vehicleIds } },
       orderBy: { date: "desc" },
-      include: { vehicle: true },
+      include: { 
+        vehicle: true,
+        parts: true 
+      },
     }),
   ]);
 

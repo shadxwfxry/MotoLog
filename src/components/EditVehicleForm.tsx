@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { updateVehicleCharacteristics } from "@/app/actions";
+import { updateVehicleCharacteristics } from "@/lib/actions/vehicle";
 import { useLanguage } from "./LanguageProvider";
 
 interface Props {

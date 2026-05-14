@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 
 type Refuel = {
@@ -22,7 +23,7 @@ type Maintenance = {
   category: string;
   cost: number;
   description: string | null;
-  parts: string | null;
+  parts: { name: string; price: number | null }[];
   vehicle: { make: string; model: string };
 };
 
@@ -32,7 +33,17 @@ interface Props {
 }
 
 export function DashboardClient({ refuels, maintenance }: Props) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const formatDate = (date: Date) => {
+    if (!mounted) return "";
+    return new Date(date).toLocaleDateString(lang);
+  };
 
   // ── Fuel stats ──────────────────────────────────────────────────────────
   const totalFuelCost = refuels.reduce((s, l) => s + l.cost, 0);
@@ -171,7 +182,7 @@ export function DashboardClient({ refuels, maintenance }: Props) {
                   <p className="font-medium">{log.vehicle.make} {log.vehicle.model}</p>
                   <p className="text-xs text-muted-foreground">
                     {log.stationName ?? "—"}{log.fuelGrade ? ` · ${log.fuelGrade}` : ""}
-                    {" · "}{new Date(log.date).toLocaleDateString()}
+                    {" · "}{formatDate(log.date)}
                     {" · "}{log.odometer.toLocaleString()} km
                   </p>
                 </div>
@@ -205,10 +216,14 @@ export function DashboardClient({ refuels, maintenance }: Props) {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {log.vehicle.make} {log.vehicle.model}
-                    {" · "}{new Date(log.date).toLocaleDateString()}
+                    {" · "}{formatDate(log.date)}
                     {" · "}{log.odometer.toLocaleString()} km
                   </p>
-                  {log.parts && <p className="text-xs text-muted-foreground">🔩 {log.parts}</p>}
+                  {log.parts.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      🔩 {log.parts.map(p => p.name).join(", ")}
+                    </p>
+                  )}
                   {log.description && <p className="text-xs text-muted-foreground">{log.description}</p>}
                 </div>
                 <p className="font-semibold">{log.cost > 0 ? `${log.cost} ₴` : "—"}</p>

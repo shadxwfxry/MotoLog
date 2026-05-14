@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addRefuelLog } from "@/app/actions";
+import { addRefuelLog } from "@/lib/actions/refuel";
 import { useLanguage } from "./LanguageProvider";
 
 export function AddRefuelForm({ vehicleId }: { vehicleId: string }) {

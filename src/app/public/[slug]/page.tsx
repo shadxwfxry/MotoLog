@@ -1,5 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const vehicle = await prisma.vehicle.findUnique({
+    where: { slug: params.slug },
+  });
+
+  if (!vehicle || !vehicle.isPublic) return { title: "Vehicle Not Found" };
+
+  return {
+    title: `${vehicle.make} ${vehicle.model} (${vehicle.year}) | MotoLog`,
+    description: `Public maintenance and fuel log for ${vehicle.make} ${vehicle.model}.`,
+  };
+}
 
 export default async function PublicVehiclePage({ params }: { params: { slug: string } }) {
   const vehicle = await prisma.vehicle.findUnique({

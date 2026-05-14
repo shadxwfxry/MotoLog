@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addMaintenanceLog } from "@/app/actions";
+import { addMaintenanceLog } from "@/lib/actions/maintenance";
 import { useLanguage } from "./LanguageProvider";
 
 const CATEGORY_PRESETS: Record<string, string[]> = {
