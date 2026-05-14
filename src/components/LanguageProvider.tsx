@@ -109,6 +109,10 @@ const translations: Translations = {
     export_pdf: "Export History (PDF)",
     share: "Share Portfolio",
     link_copied: "Link copied!",
+    photo_url: "Photo",
+    tap_to_upload: "Tap to upload photo",
+    initial_odometer: "Initial Odometer (km)",
+    edit_specs_photo: "Edit Specs & Photo",
   },
   ru: {
     home: "Главная",
@@ -210,6 +214,10 @@ const translations: Translations = {
     export_pdf: "Экспорт в PDF",
     share: "Поделиться профилем",
     link_copied: "Ссылка скопирована!",
+    photo_url: "Фото",
+    tap_to_upload: "Нажмите, чтобы загрузить",
+    initial_odometer: "Начальный пробег (км)",
+    edit_specs_photo: "Изменить фото и ТТХ",
   },
   uk: {
     home: "Головна",
@@ -311,6 +319,10 @@ const translations: Translations = {
     export_pdf: "Експорт в PDF",
     share: "Поділитися профілем",
     link_copied: "Посилання скопійовано!",
+    photo_url: "Фото",
+    tap_to_upload: "Натисніть для завантаження",
+    initial_odometer: "Початковий пробіг (км)",
+    edit_specs_photo: "Змінити фото та ТТХ",
   },
 };
 

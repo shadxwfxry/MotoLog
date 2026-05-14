@@ -29,6 +29,8 @@ export const viewport = {
   userScalable: false,
 };
 
+import { Header } from "@/components/Header";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -55,6 +57,7 @@ export default async function RootLayout({
       <body className={inter.className}>
         <Providers initialTheme={theme} initialAccent={accent}>
           <div className="flex flex-col min-h-screen pb-20">
+            <Header />
             <main className="flex-1">
               {children}
             </main>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { updateVehicleCharacteristics } from "@/lib/actions/vehicle";
 import { useLanguage } from "./LanguageProvider";
+import { compressImage } from "@/lib/imageUtils";
 
 interface Props {
   vehicleId: string;
@@ -21,10 +22,31 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
   
   const isFullyConfigured = defaultValues.engineDisplacement && defaultValues.power && defaultValues.weight;
   const [isEditing, setIsEditing] = useState(!isFullyConfigured);
+  const [photoBase64, setPhotoBase64] = useState<string>(
+    // @ts-ignore
+    defaultValues.photoUrl || ""
+  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await compressImage(file);
+      setPhotoBase64(base64);
+    } catch (err) {
+      console.error("Failed to compress image", err);
+    }
+  };
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setError(null);
+    
+    if (photoBase64) {
+      formData.set("photoUrl", photoBase64);
+    }
+
     const result = await updateVehicleCharacteristics(vehicleId, formData);
     
     if (result?.error) {
@@ -46,7 +68,7 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
         onClick={() => setIsEditing(true)}
         className="w-full text-center text-xs text-muted-foreground hover:text-primary py-3 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-all font-medium"
       >
-        ⚙️ {t("edit_characteristics") || "Edit Specs (CC, HP, Weight)"}
+        ⚙️ {t("edit_characteristics") || "Edit Specs & Photo"}
       </button>
     );
   }
@@ -109,15 +131,28 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
       </div>
       
       <div className="flex flex-col gap-1 mt-2">
-        <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Photo URL</label>
-        <input
-          name="photoUrl"
-          type="url"
-          // @ts-ignore
-          defaultValue={defaultValues.photoUrl ?? ""}
-          placeholder="https://example.com/photo.jpg"
-          className="w-full p-2.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+        <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Vehicle Photo</label>
+        <input 
+          type="file" 
+          accept="image/*" 
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden" 
         />
+        <div 
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full h-24 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition overflow-hidden relative"
+        >
+          {photoBase64 ? (
+            <img src={photoBase64} alt="Preview" className="w-full h-full object-cover" />
+          ) : (
+            <>
+              <span className="text-xl mb-1">📸</span>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Tap to upload photo</span>
+            </>
+          )}
+        </div>
+        <input type="hidden" name="photoUrl" value={photoBase64} />
       </div>
 
       {error && (

@@ -16,12 +16,26 @@ export async function addVehicle(formData: FormData) {
     return { error: validation.error.issues[0].message };
   }
 
-  await prisma.vehicle.create({
+  const initialOdo = data.initialOdometer ? parseInt(data.initialOdometer as string, 10) : null;
+
+  const vehicle = await prisma.vehicle.create({
     data: {
       ...validation.data,
       userId: user.id,
     },
   });
+
+  if (initialOdo !== null && initialOdo > 0) {
+    await prisma.refuelingLog.create({
+      data: {
+        vehicleId: vehicle.id,
+        odometer: initialOdo,
+        liters: 0,
+        cost: 0,
+        stationName: "Initial Odometer",
+      }
+    });
+  }
 
   revalidatePath("/garage");
 }

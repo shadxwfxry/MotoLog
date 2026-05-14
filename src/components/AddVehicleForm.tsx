@@ -1,21 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { addVehicle } from "@/lib/actions/vehicle";
 import { useLanguage } from "./LanguageProvider";
+import { compressImage } from "@/lib/imageUtils";
 
 export function AddVehicleForm() {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [photoBase64, setPhotoBase64] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const base64 = await compressImage(file);
+      setPhotoBase64(base64);
+    } catch (err) {
+      console.error("Failed to compress image", err);
+    }
+  };
 
   async function handleSubmit(formData: FormData) {
     setError(null);
+    setLoading(true);
+    
+    if (photoBase64) {
+      formData.set("photoUrl", photoBase64);
+    }
+
     try {
       await addVehicle(formData);
       setIsOpen(false);
+      setPhotoBase64(""); // reset
     } catch (e: any) {
       setError(e.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -29,11 +54,11 @@ export function AddVehicleForm() {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-md rounded-3xl border border-border shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-card w-full max-w-md rounded-3xl border border-border shadow-2xl p-6 space-y-4 my-auto">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">{t("add_vehicle")}</h2>
-              <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground p-2">
                 ✕
               </button>
             </div>
@@ -66,9 +91,35 @@ export function AddVehicleForm() {
                 </div>
               </div>
 
+              {/* Photo Upload Section */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("photo_url") || "Photo"}</label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden" 
+                />
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full h-32 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition overflow-hidden relative"
+                >
+                  {photoBase64 ? (
+                    <img src={photoBase64} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <span className="text-2xl mb-1">📸</span>
+                      <span className="text-xs font-medium text-muted-foreground">{t("tap_to_upload") || "Tap to upload photo"}</span>
+                    </>
+                  )}
+                </div>
+                <input type="hidden" name="photoUrl" value={photoBase64} />
+              </div>
+
               <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Photo URL</label>
-                <input name="photoUrl" type="url" className="w-full bg-muted rounded-xl px-4 py-2 text-sm border-none focus:ring-2 focus:ring-primary" placeholder="https://example.com/bike.jpg" />
+                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("initial_odometer") || "Initial Odometer (km)"}</label>
+                <input name="initialOdometer" type="number" className="w-full bg-muted rounded-xl px-4 py-2 text-sm border-none focus:ring-2 focus:ring-primary" placeholder="e.g. 15000" />
               </div>
 
               <div className="grid grid-cols-3 gap-3">
