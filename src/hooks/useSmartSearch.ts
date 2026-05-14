@@ -17,7 +17,6 @@ export function useSmartSearch({ refuels, maintenance }: UseSmartSearchProps) {
   const [loading, setLoading] = useState(false);
   const [aiResult, setAiResult] = useState<AiResult | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [googleSearchOpen, setGoogleSearchOpen] = useState(false);
 
   // Local entries from refueling and maintenance logs
   const localEntries = useMemo((): LogEntry[] => [
@@ -70,17 +69,9 @@ export function useSmartSearch({ refuels, maintenance }: UseSmartSearchProps) {
     }
   };
 
-  const handleWebSearch = () => {
-    if (!query.trim()) return;
-    setAiResult(null);
-    setAiError(null);
-    setGoogleSearchOpen(true);
-  };
-
   const resetSearch = () => {
     setAiResult(null);
     setAiError(null);
-    setGoogleSearchOpen(false);
   };
 
   return {
@@ -90,10 +81,7 @@ export function useSmartSearch({ refuels, maintenance }: UseSmartSearchProps) {
     aiResult,
     aiError,
     localResults,
-    googleSearchOpen,
-    setGoogleSearchOpen,
     handleAiSearch,
-    handleWebSearch,
     resetSearch,
   };
 }

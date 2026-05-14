@@ -64,17 +64,23 @@ export async function POST(req: Request) {
   if (apiKey && apiKey.trim().length > 10) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        // @ts-ignore
+        tools: [{ googleSearchRetrieval: { dynamicRetrievalConfig: { mode: "MODE_DYNAMIC", dynamicThreshold: 0.3 } } }]
+      });
 
-      const prompt = `You are MotoAssistant, a helpful AI for a motorcycle app.
+      const prompt = `You are MotoAssistant, an expert motorcycle AI mechanic.
 The user asked: "${query}"
 
 Here are their relevant logs from the database:
-${JSON.stringify(localResults.slice(0, 50))}
+${JSON.stringify(localResults.slice(0, 15))}
 
-If the user is asking about their logs (like "when was my last oil change" or "how many liters did I refuel"), answer using the provided logs. 
-If no logs are relevant, answer their general motorcycle question naturally. Be concise and helpful.
-IMPORTANT: Respond in plain text ONLY. Do NOT use any Markdown formatting (no asterisks for bold/italic, no hashes for headers, no bullet points).`;
+INSTRUCTIONS:
+1. If the user is asking about their personal logs (like "when was my last oil change"), answer using the provided JSON logs.
+2. If the user asks a general motorcycle question (like "what tire pressure", "how to bleed brakes", specs, news, etc.), you MUST use your Google Search tool to find the most accurate and up-to-date information from the web to answer them.
+3. Be concise, friendly, and highly accurate.
+4. Respond in plain text format but you can use newlines for readability. Do NOT use markdown bold/italic/headers.`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
