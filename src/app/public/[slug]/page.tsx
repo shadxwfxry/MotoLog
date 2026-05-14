@@ -19,8 +19,16 @@ export default async function PublicVehiclePage({ params }: { params: { slug: st
   const vehicle = await prisma.vehicle.findUnique({
     where: { slug: params.slug },
     include: {
-      refuelingLogs: { orderBy: { date: 'desc' }, take: 5 },
-      maintenanceLogs: { orderBy: { date: 'desc' }, take: 5 }
+      refuelingLogs: { 
+        where: { isPublic: true },
+        orderBy: { date: 'desc' }, 
+        take: 10 
+      },
+      maintenanceLogs: { 
+        where: { isPublic: true },
+        orderBy: { date: 'desc' }, 
+        take: 10 
+      }
     }
   });
 

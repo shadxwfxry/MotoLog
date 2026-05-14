@@ -3,19 +3,23 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getAuthUser, verifyVehicleOwnership } from "./utils";
+import { maintenanceSchema, plannedMaintenanceSchema } from "@/lib/validations";
 
 export async function addMaintenanceLog(vehicleId: string, formData: FormData) {
   const user = await getAuthUser();
   await verifyVehicleOwnership(vehicleId, user.id);
 
+  const data = Object.fromEntries(formData.entries());
+  const validation = maintenanceSchema.safeParse(data);
+
+  if (!validation.success) {
+    throw new Error(validation.error.errors[0].message);
+  }
+
   await prisma.maintenanceLog.create({
     data: {
+      ...validation.data,
       vehicleId,
-      odometer: parseInt(formData.get("odometer")?.toString() || "0", 10),
-      category: formData.get("category")?.toString() || "service",
-      type: formData.get("type")?.toString() || "Other",
-      cost: parseFloat(formData.get("cost")?.toString() || "0"),
-      description: formData.get("description")?.toString() || null,
     },
   });
 
@@ -24,23 +28,50 @@ export async function addMaintenanceLog(vehicleId: string, formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function deleteMaintenanceLog(logId: string) {
+  const user = await getAuthUser();
+  
+  const log = await prisma.maintenanceLog.delete({
+    where: {
+      id: logId,
+      vehicle: { userId: user.id }
+    }
+  });
+
+  revalidatePath("/garage");
+  revalidatePath(`/garage/${log.vehicleId}`);
+  revalidatePath("/dashboard");
+}
+
+export async function toggleMaintenancePublic(logId: string, isPublic: boolean) {
+  const user = await getAuthUser();
+  
+  const log = await prisma.maintenanceLog.update({
+    where: {
+      id: logId,
+      vehicle: { userId: user.id }
+    },
+    data: { isPublic }
+  });
+
+  revalidatePath(`/garage/${log.vehicleId}`);
+}
+
 export async function addPlannedMaintenance(vehicleId: string, formData: FormData) {
   const user = await getAuthUser();
   await verifyVehicleOwnership(vehicleId, user.id);
 
-  const targetDateRaw = formData.get("targetDate")?.toString();
-  const targetOdometerRaw = formData.get("targetOdometer")?.toString();
-  const intervalKmRaw = formData.get("intervalKm")?.toString();
+  const data = Object.fromEntries(formData.entries());
+  const validation = plannedMaintenanceSchema.safeParse(data);
+
+  if (!validation.success) {
+    throw new Error(validation.error.errors[0].message);
+  }
 
   await prisma.plannedMaintenance.create({
     data: {
+      ...validation.data,
       vehicleId,
-      type: formData.get("type")?.toString() || "Reminder",
-      category: formData.get("category")?.toString() || "reminder",
-      targetOdometer: targetOdometerRaw ? parseInt(targetOdometerRaw, 10) : null,
-      targetDate: targetDateRaw ? new Date(targetDateRaw) : null,
-      intervalKm: intervalKmRaw ? parseInt(intervalKmRaw, 10) : null,
-      description: formData.get("description")?.toString() || null,
     },
   });
 

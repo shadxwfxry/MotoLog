@@ -83,6 +83,18 @@ export function DashboardClient({ refuels, maintenance }: Props) {
     consumable: "text-yellow-400",
   };
 
+  const vehicleMap: Record<string, { fuel: number; maint: number }> = {};
+  for (const r of refuels) {
+    const key = `${r.vehicle.make} ${r.vehicle.model}`;
+    if (!vehicleMap[key]) vehicleMap[key] = { fuel: 0, maint: 0 };
+    vehicleMap[key].fuel += r.cost;
+  }
+  for (const m of maintenance) {
+    const key = `${m.vehicle.make} ${m.vehicle.model}`;
+    if (!vehicleMap[key]) vehicleMap[key] = { fuel: 0, maint: 0 };
+    vehicleMap[key].maint += m.cost;
+  }
+
   return (
     <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6">
       <h1 className="text-2xl font-bold">📊 {t("stats")}</h1>
@@ -95,30 +107,26 @@ export function DashboardClient({ refuels, maintenance }: Props) {
         <StatCard label={t("total_maint_cost")} value={`${totalMaintCost.toFixed(0)} ₴`} warn={totalMaintCost > 0} />
       </div>
 
-      {/* Total spend bar */}
-      {totalCostAll > 0 && (
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">{t("spending_breakdown")}</p>
-          <div className="flex h-4 rounded-full overflow-hidden gap-px">
-            <div
-              className="bg-primary transition-all"
-              style={{ width: `${(totalFuelCost / totalCostAll) * 100}%` }}
-              title={`${t("fuel")}: ${totalFuelCost.toFixed(0)} ₴`}
-            />
-            <div
-              className="bg-orange-500 transition-all"
-              style={{ width: `${(totalMaintCost / totalCostAll) * 100}%` }}
-              title={`${t("maintenance")}: ${totalMaintCost.toFixed(0)} ₴`}
-            />
-          </div>
-          <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-            <span><span className="inline-block w-2 h-2 rounded-full bg-primary mr-1" />{t("fuel")} {((totalFuelCost / totalCostAll) * 100).toFixed(0)}%</span>
-            <span><span className="inline-block w-2 h-2 rounded-full bg-orange-500 mr-1" />{t("maintenance")} {((totalMaintCost / totalCostAll) * 100).toFixed(0)}%</span>
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* ── By Vehicle ── */}
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">🏍 {t("by_vehicle")}</h2>
+          <div className="space-y-4">
+            {Object.entries(vehicleMap).map(([name, d]) => (
+              <div key={name}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="font-medium">{name}</span>
+                  <span className="font-bold">{(d.fuel + d.maint).toFixed(0)} ₴</span>
+                </div>
+                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden flex">
+                  <div className="bg-primary h-full" style={{ width: `${(d.fuel / (d.fuel + d.maint || 1)) * 100}%` }} />
+                  <div className="bg-orange-500 h-full" style={{ width: `${(d.maint / (d.fuel + d.maint || 1)) * 100}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      )}
 
-      <div className="grid gap-4 md:grid-cols-2">
         {/* ── Station table ── */}
         {Object.keys(stationMap).length > 0 && (
           <div className="rounded-2xl border border-border bg-card p-5">
@@ -128,16 +136,14 @@ export function DashboardClient({ refuels, maintenance }: Props) {
                 <thead>
                   <tr className="text-muted-foreground text-xs border-b border-border">
                     <th className="pb-2 text-left">{t("station_name")}</th>
-                    <th className="pb-2 text-right">{t("visits")}</th>
                     <th className="pb-2 text-right">{t("liters")}</th>
                     <th className="pb-2 text-right">₴/L</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Object.entries(stationMap).map(([station, d]) => (
+                  {Object.entries(stationMap).slice(0, 5).map(([station, d]) => (
                     <tr key={station} className="border-b border-border last:border-0">
-                      <td className="py-2 font-medium">{station}</td>
-                      <td className="py-2 text-right text-muted-foreground">{d.count}</td>
+                      <td className="py-2 font-medium truncate max-w-[100px]">{station}</td>
                       <td className="py-2 text-right">{d.liters.toFixed(1)}</td>
                       <td className="py-2 text-right font-semibold text-primary">
                         {d.liters > 0 ? (d.cost / d.liters).toFixed(2) : "—"}

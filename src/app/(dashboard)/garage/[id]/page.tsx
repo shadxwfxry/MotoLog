@@ -7,6 +7,8 @@ import { EditVehicleForm } from "@/components/EditVehicleForm";
 import { AddRefuelForm } from "@/components/AddRefuelForm";
 import { AddMaintenanceForm } from "@/components/AddMaintenanceForm";
 import { RemindersSection } from "@/components/RemindersSection";
+import { VehicleActions } from "@/components/VehicleActions";
+import { LogActions } from "@/components/LogActions";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +92,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                   🔗 Public Page
                 </a>
               )}
+              <VehicleActions vehicleId={vehicle.id} />
             </div>
           </div>
 
@@ -127,9 +130,12 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                       </div>
                       <p className="text-xs text-muted-foreground ml-7">{new Date(log.date).toLocaleDateString()} · {log.odometer.toLocaleString()} km</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-sm text-primary">{log.cost} ₴</p>
-                      <p className="text-[10px] text-muted-foreground">{log.liters} L · {log.pricePerLiter} ₴/L</p>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="text-right">
+                        <p className="font-bold text-sm text-primary">{log.cost} ₴</p>
+                        <p className="text-[10px] text-muted-foreground">{log.liters} L · {log.pricePerLiter} ₴/L</p>
+                      </div>
+                      <LogActions logId={log.id} type="refuel" isPublic={log.isPublic} />
                     </div>
                   </div>
                 ))}
@@ -147,8 +153,11 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                       </div>
                       <p className="text-xs text-muted-foreground ml-7">{new Date(log.date).toLocaleDateString()} · {log.odometer.toLocaleString()} km</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-sm">{log.cost} ₴</p>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="text-right">
+                        <p className="font-bold text-sm">{log.cost} ₴</p>
+                      </div>
+                      <LogActions logId={log.id} type="maintenance" isPublic={log.isPublic} />
                     </div>
                   </div>
                 ))}

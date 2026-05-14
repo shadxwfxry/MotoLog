@@ -47,6 +47,7 @@ model RefuelingLog {
   stationName  String?
   fuelGrade    String?
   notes        String?
+  isPublic     Boolean  @default(true)
 }
 
 model MaintenanceLog {
@@ -60,6 +61,7 @@ model MaintenanceLog {
   cost        Float
   description String?
   parts       Part[]
+  isPublic    Boolean             @default(true)
 }
 
 model Part {
