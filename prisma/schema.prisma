@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String    @id @default(cuid())
+  name     String?
+  email    String?   @unique
+  password String?
+  vehicles Vehicle[]
+}
+
+model Vehicle {
+  id                  String               @id @default(cuid())
+  make                String
+  model               String
+  year                Int
+  engineDisplacement  Int?
+  power               Int?
+  weight              Int?
+  userId              String
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isPublic            Boolean              @default(false)
+  slug                String               @unique @default(uuid())
+  refuelingLogs       RefuelingLog[]
+  maintenanceLogs     MaintenanceLog[]
+  plannedMaintenances PlannedMaintenance[]
+}
+
+model RefuelingLog {
+  id           String   @id @default(cuid())
+  vehicleId    String
+  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date         DateTime @default(now())
+  odometer     Int
+  liters       Float
+  pricePerLiter Float?
+  cost         Float
+  stationName  String?
+  fuelGrade    String?
+  notes        String?
+}
+
+model MaintenanceLog {
+  id          String              @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date        DateTime            @default(now())
+  odometer    Int
+  category    String              @default("service") // "service" | "repair" | "consumable"
+  type        String
+  cost        Float
+  description String?
+  parts       String?             // comma-separated parts replaced
+}
+
+model PlannedMaintenance {
+  id             String    @id @default(cuid())
+  vehicleId      String
+  vehicle        Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  type           String
+  category       String    @default("reminder") // "reminder" | "service" | "consumable"
+  targetOdometer Int?
+  targetDate     DateTime?
+  intervalKm     Int?      // repeat every N km
+  isCompleted    Boolean   @default(false)
+  description    String?
+}
