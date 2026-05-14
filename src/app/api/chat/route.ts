@@ -66,7 +66,6 @@ export async function POST(req: Request) {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
         model: "gemini-flash-latest",
-        tools: [{ googleSearchRetrieval: {} }] as any,
       });
 
       const prompt = `You are MotoAssistant, an expert motorcycle AI mechanic.
@@ -77,18 +76,23 @@ ${JSON.stringify(localResults.slice(0, 15))}
 
 INSTRUCTIONS:
 1. If the user is asking about their personal logs (like "when was my last oil change"), answer using the provided JSON logs.
-2. If the user asks a general motorcycle question (like "what tire pressure", "how to bleed brakes", specs, news, etc.), you MUST use your Google Search tool to find the most accurate and up-to-date information from the web to answer them.
+2. If the user asks a general motorcycle question (specs, maintenance tips, etc.), use your extensive internal knowledge to provide a helpful answer.
 3. Be concise, friendly, and highly accurate.
 4. Respond in plain text format but you can use newlines for readability. Do NOT use markdown bold/italic/headers.`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
       aiResponse = response.text();
-    } catch (e: any) {
-      aiResponse = `Error contacting AI: ${e.message}. Please check if your AI_API_KEY is correct.`;
+    } catch (error: any) {
+      console.error("AI Error:", error);
+      if (error.message?.includes("429")) {
+        aiResponse = "Извините, лимит запросов к ИИ временно исчерпан (Google Quota). Пожалуйста, подождите минуту и попробуйте снова! 🏍️";
+      } else {
+        aiResponse = `Ошибка связи с ИИ: ${error.message}. Проверьте AI_API_KEY.`;
+      }
     }
   } else {
-    aiResponse = `Search results for "${query}": Found ${localResults.length} matching entries in your history. (AI features disabled - please set a valid AI_API_KEY in your .env file)`;
+    aiResponse = "AI_API_KEY не настроен. Пожалуйста, добавьте его в переменные окружения Vercel.";
   }
 
   // Clean up 'raw' data before sending to client
