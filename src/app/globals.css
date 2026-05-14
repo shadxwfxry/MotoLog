@@ -85,3 +85,8 @@
   .xs\:block { display: block !important; }
   .hidden { display: none !important; }
 }
+
+/* Hide Google CSE search box to only show results */
+.gsc-control-cse .gsc-search-box {
+  display: none !important;
+}

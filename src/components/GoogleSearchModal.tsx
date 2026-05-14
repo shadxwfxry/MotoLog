@@ -43,13 +43,16 @@ export function GoogleSearchModal({ open, query, onClose }: GoogleSearchModalPro
         const cse = window.google?.search?.cse?.element;
         if (cse) {
           if (!initialized.current) {
+            // Render the full search widget but we can hide the input if we want
+            // using "search" instead of "searchresults-only" is often more reliable
             cse.render({
               div: "google-cse-results",
-              tag: "searchresults-only",
+              tag: "search",
+              gname: "motolog-search"
             });
             initialized.current = true;
           }
-          const el = cse.getElement("google-cse-results");
+          const el = cse.getElement("motolog-search");
           if (el && query) {
             el.execute(query);
             clearInterval(interval);
