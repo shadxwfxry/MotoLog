@@ -44,7 +44,7 @@ export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
       </button>
 
       {open && (
-        <form action={handleSubmit} className="mt-3 p-4 border border-border rounded-xl bg-muted/20 space-y-4">
+        <form action={handleSubmit as any} className="mt-3 p-4 border border-border rounded-xl bg-muted/20 space-y-4">
           <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             🔧 {t("add_service")}
           </h4>

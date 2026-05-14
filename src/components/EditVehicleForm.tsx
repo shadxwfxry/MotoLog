@@ -16,17 +16,28 @@ interface Props {
 export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
   const { t } = useLanguage();
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   
   const isFullyConfigured = defaultValues.engineDisplacement && defaultValues.power && defaultValues.weight;
   const [isEditing, setIsEditing] = useState(!isFullyConfigured);
 
   async function handleSubmit(formData: FormData) {
-    await updateVehicleCharacteristics(vehicleId, formData);
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-      setIsEditing(false); // Hide after save
-    }, 1500);
+    setLoading(true);
+    setError(null);
+    const result = await updateVehicleCharacteristics(vehicleId, formData);
+    
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+    } else {
+      setSaved(true);
+      setLoading(false);
+      setTimeout(() => {
+        setSaved(false);
+        setIsEditing(false);
+      }, 1500);
+    }
   }
 
   if (!isEditing) {
@@ -41,7 +52,7 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
   }
 
   return (
-    <form action={handleSubmit} className="mt-4 space-y-3 p-4 border border-border rounded-xl bg-muted/30 relative">
+    <form action={handleSubmit as any} className="mt-4 space-y-3 p-4 border border-border rounded-xl bg-muted/30 relative">
       {isFullyConfigured && (
         <button 
           type="button" 
@@ -87,11 +98,22 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
           />
         </div>
       </div>
+      {error && (
+        <div className="p-2 text-[10px] bg-destructive/10 text-destructive rounded border border-destructive/20 font-bold animate-in fade-in zoom-in duration-200">
+          ⚠️ {error}
+        </div>
+      )}
       <button
         type="submit"
-        className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-bold tracking-wide hover:bg-primary/90 transition-colors shadow-md"
+        disabled={loading}
+        className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-bold tracking-wide hover:bg-primary/90 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {saved ? "✓ Saved!" : t("save_changes")}
+        {loading ? (
+           <span className="flex items-center justify-center gap-2">
+             <span className="w-3 h-3 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+             Saving...
+           </span>
+        ) : saved ? "✓ Saved!" : t("save_changes")}
       </button>
     </form>
   );

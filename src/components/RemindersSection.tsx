@@ -157,7 +157,7 @@ export function RemindersSection({
 
       {/* Add form */}
       {open && (
-        <form action={handleAdd} className="p-4 border border-border rounded-xl bg-muted/20 space-y-4">
+        <form action={handleAdd as any} className="p-4 border border-border rounded-xl bg-muted/20 space-y-4">
           <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("add_reminder")}</h5>
 
           {/* Category */}

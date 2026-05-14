@@ -13,7 +13,7 @@ export async function addMaintenanceLog(vehicleId: string, formData: FormData) {
   const validation = maintenanceSchema.safeParse(data);
 
   if (!validation.success) {
-    throw new Error(validation.error.issues[0].message);
+    return { error: validation.error.issues[0].message };
   }
 
   await prisma.maintenanceLog.create({
@@ -38,7 +38,7 @@ export async function deleteMaintenanceLog(logId: string) {
     }
   });
 
-  if (!log) throw new Error("Log not found or access denied");
+  if (!log) return { error: "Log not found or access denied" };
 
   await prisma.maintenanceLog.delete({
     where: { id: logId }
@@ -77,7 +77,7 @@ export async function addPlannedMaintenance(vehicleId: string, formData: FormDat
   const validation = plannedMaintenanceSchema.safeParse(data);
 
   if (!validation.success) {
-    throw new Error(validation.error.issues[0].message);
+    return { error: validation.error.issues[0].message };
   }
 
   await prisma.plannedMaintenance.create({

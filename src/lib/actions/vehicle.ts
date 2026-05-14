@@ -13,7 +13,7 @@ export async function addVehicle(formData: FormData) {
   const validation = vehicleSchema.safeParse(data);
   
   if (!validation.success) {
-    throw new Error(validation.error.issues[0].message);
+    return { error: validation.error.issues[0].message };
   }
 
   await prisma.vehicle.create({
@@ -33,7 +33,7 @@ export async function updateVehicleCharacteristics(vehicleId: string, formData: 
   const validation = vehicleSchema.safeParse(data);
   
   if (!validation.success) {
-    throw new Error(validation.error.issues[0].message);
+    return { error: validation.error.issues[0].message };
   }
 
   const result = await prisma.vehicle.updateMany({
@@ -45,7 +45,7 @@ export async function updateVehicleCharacteristics(vehicleId: string, formData: 
   });
 
   if (result.count === 0) {
-    throw new Error("Vehicle not found or access denied");
+    return { error: "Vehicle not found or access denied" };
   }
   
   revalidatePath("/garage");

@@ -38,7 +38,7 @@ export function AddVehicleForm() {
               </button>
             </div>
 
-            <form action={handleSubmit} className="space-y-4">
+            <form action={handleSubmit as any} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t("make")}</label>
