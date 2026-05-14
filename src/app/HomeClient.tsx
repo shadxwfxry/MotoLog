@@ -3,14 +3,7 @@
 import { useLanguage } from "@/components/LanguageProvider";
 import { SmartSearch } from "@/components/SmartSearch";
 import { formatDate } from "@/lib/utils";
-
-type MotoNews = {
-  title: string;
-  link: string;
-  pubDate: string;
-  contentSnippet: string;
-  source: string;
-};
+import type { MotoNews } from "@/types";
 
 interface Props {
   news: MotoNews[];

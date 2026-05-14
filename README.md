@@ -1,93 +1,253 @@
-# 🏍️ MotoLog v2.0 — Your Ultimate Motorcycle Companion
+# 🏍️ MotoLog v1.0
 
-**MotoLog** is a modern, high-performance Progressive Web Application (PWA) designed for motorcycle enthusiasts to track maintenance, fuel expenses, and garage history with ease. Integrated with AI-powered insights and a regionalized news hub.
+<div align="center">
 
-![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
-![Next.js](https://img.shields.io/badge/Framework-Next.js%2014-black)
-![Prisma](https://img.shields.io/badge/ORM-Prisma-2D3748)
-![Tailwind](https://img.shields.io/badge/CSS-Tailwind-38B2AC)
+[![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)](https://github.com/shadxwfxry/MotoLog/releases)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![Prisma](https://img.shields.io/badge/ORM-Prisma-2D3748?logo=prisma)](https://www.prisma.io/)
+[![Supabase](https://img.shields.io/badge/DB-Supabase-3ECF8E?logo=supabase)](https://supabase.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 🌟 Key Features
+**[🇺🇦 Українська](#-українська) · [🇷🇺 Русский](#-русский) · [🇬🇧 English](#-english)**
 
-### 🛠️ Smart Garage Management
-*   **Multi-Vehicle Support**: Track several bikes in one dashboard.
-*   **Detailed Specs**: Log engine displacement (cc), power (hp), and weight.
-*   **Photo Integration**: Upload photos of your bikes for a personalized experience.
-*   **Maintenance Reminders**: Set upcoming service tasks and get notified based on mileage or date.
-
-### 📊 Expenses & Analytics
-*   **Fuel Tracking**: Log every refuel with station name, cost, liters, and odometer readings.
-*   **Maintenance Logs**: Keep a full history of oil changes, tire swaps, and repairs.
-*   **Automated Statistics**: Visual breakdowns of average consumption (L/100km) and total costs.
-*   **PDF Export**: Generate professional PDF reports of your bike's history for yourself or future buyers.
-
-### 🧠 AI MotoAssistant & Smart Search
-*   **AI Search**: Ask natural questions like *"When was my last oil change?"* or *"How much have I spent on gas this month?"*.
-*   **Built-in Search Hub**: Universal search bar that filters local garage logs AND performs native web searches (embedded results from DuckDuckGo).
-*   **Smart Triggers**: Automatically switches between local AI analytics and web search based on your query keywords.
-
-### 🌐 Content & Customization
-*   **Regional News Hub**: Stay updated with moto-news tailored for your region (Ukraine, Russia, Europe, USA, Asia).
-*   **Multi-Language**: Full support for Russian, Ukrainian, and English.
-*   **Theme Engine**: Switch between Light and Dark modes with persistent accent color customization (Orange, Blue, Green, Purple, Red).
+</div>
 
 ---
 
-## 🚀 Tech Stack
+## 🇺🇦 Українська
 
-*   **Framework**: [Next.js 14](https://nextjs.org/) (App Router)
-*   **Database**: [SQLite](https://www.sqlite.org/) (Development) / PostgreSQL (Production)
-*   **ORM**: [Prisma](https://www.prisma.io/)
-*   **Authentication**: [NextAuth.js](https://next-auth.js.org/)
-*   **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [Shadcn UI](https://ui.shadcn.com/)
-*   **AI**: [Google Gemini AI SDK](https://ai.google.dev/)
-*   **Parsing**: Native Regex-based Web Scraper (DuckDuckGo HTML)
+### Що це?
+**MotoLog** — це персональний щоденник для мотоциклістів. Ведіть облік заправок, ремонтів та витрат на своїх байках в одному місці. Підтримується кілька мотоциклів, є AI-асистент та пошук у Google прямо в додатку.
+
+### ✨ Можливості
+- 🛠️ **Гараж** — кілька мотоциклів, фото, характеристики (об'єм двигуна, потужність, вага)
+- ⛽ **Облік заправок** — літри, ціна, одометр, назва АЗС
+- 🔧 **Журнал ТО** — заміна масла, ремонти, запчастини з цінами
+- 🔔 **Нагадування** — за пробігом або датою (наступне ТО, заміна масла тощо)
+- 🤖 **AI-асистент** — питайте «Коли я міняв масло?» або «Скільки я заправив останній раз?»
+- 🔍 **Пошук** — Google Search прямо в додатку
+- 📊 **Статистика** — середня витрата, загальні витрати по категоріях
+- 📄 **Експорт** — PDF та CSV звіти для продажу або архіву
+- 📰 **Новини** — мотоновини для вашого регіону
+- 🌙 **Теми** — темна/світла тема + 5 акцентних кольорів
+- 📱 **PWA** — встановлюється на телефон як повноцінний застосунок
+
+### 🚀 Запуск локально
+
+**Вимоги:** Node.js 18+, pnpm
+
+```bash
+# 1. Клонуйте репозиторій
+git clone https://github.com/shadxwfxry/MotoLog.git
+cd MotoLog
+
+# 2. Встановіть залежності
+pnpm install
+
+# 3. Налаштуйте змінні середовища
+cp .env.example .env
+# Відредагуйте .env (дивіться секцію нижче)
+
+# 4. Синхронізуйте базу даних
+npx prisma db push
+
+# 5. Запустіть сервер
+pnpm dev
+```
+
+Відкрийте [http://localhost:3000](http://localhost:3000).
+
+### ⚙️ Змінні середовища (`.env`)
+
+```env
+# Supabase — Transaction Pooler (порт 6543)
+DATABASE_URL="postgresql://..."
+
+# Supabase — пряме з'єднання для міграцій (порт 5432)
+DIRECT_URL="postgresql://..."
+
+# Секрет для NextAuth (будь-який довгий рядок)
+NEXTAUTH_SECRET="your-secret-here"
+
+# URL вашого сайту
+NEXTAUTH_URL="https://your-app.vercel.app"
+
+# Ключ Google Gemini AI
+AI_API_KEY="AIza..."
+```
+
+### 🌐 Деплой на Vercel
+
+1. Форкніть або запуште репозиторій на GitHub
+2. Підключіть проект у [vercel.com](https://vercel.com)
+3. Додайте всі змінні з `.env` у **Settings → Environment Variables**
+4. Готово — Vercel автоматично збере проект
 
 ---
 
-## 🛠️ Installation & Setup
+## 🇷🇺 Русский
 
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/yourusername/motolog.git
-    cd motolog
-    ```
+### Что это?
+**MotoLog** — персональный дневник мотоциклиста. Ведите учёт заправок, ТО и расходов по всем своим байкам в одном месте. Поддерживается несколько мотоциклов, встроен AI-ассистент и поиск Google прямо в приложении.
 
-2.  **Install dependencies**:
-    ```bash
-    npm install
-    # or
-    pnpm install
-    ```
+### ✨ Возможности
+- 🛠️ **Гараж** — несколько мотоциклов, фото, характеристики (объём двигателя, мощность, вес)
+- ⛽ **Учёт заправок** — литры, цена, одометр, название АЗС
+- 🔧 **Журнал ТО** — замена масла, ремонты, запчасти с ценами
+- 🔔 **Напоминания** — по пробегу или дате (следующее ТО, замена масла и т.д.)
+- 🤖 **AI-ассистент** — спрашивайте «Когда я менял масло?» или «Сколько я залил в прошлый раз?»
+- 🔍 **Поиск** — Google Search прямо в приложении
+- 📊 **Статистика** — средний расход, общие затраты по категориям
+- 📄 **Экспорт** — PDF и CSV отчёты для продажи или архива
+- 📰 **Новости** — мото-новости для вашего региона
+- 🌙 **Темы** — тёмная/светлая тема + 5 акцентных цветов
+- 📱 **PWA** — устанавливается на телефон как полноценное приложение
 
-3.  **Configure environment variables**:
-    Create a `.env` file in the root directory:
-    ```env
-    DATABASE_URL="file:./dev.db"
-    NEXTAUTH_SECRET="your-random-secret"
-    NEXTAUTH_URL="http://localhost:3000"
-    AI_API_KEY="your-google-gemini-api-key"
-    ```
+### 🚀 Запуск локально
 
-4.  **Database setup**:
-    ```bash
-    npx prisma migrate dev --name init
-    npx prisma generate
-    ```
+**Требования:** Node.js 18+, pnpm
 
-5.  **Run the development server**:
-    ```bash
-    npm run dev
-    ```
+```bash
+# 1. Клонируйте репозиторий
+git clone https://github.com/shadxwfxry/MotoLog.git
+cd MotoLog
+
+# 2. Установите зависимости
+pnpm install
+
+# 3. Настройте переменные окружения
+cp .env.example .env
+# Отредактируйте .env (смотрите секцию ниже)
+
+# 4. Синхронизируйте базу данных
+npx prisma db push
+
+# 5. Запустите сервер
+pnpm dev
+```
+
+Откройте [http://localhost:3000](http://localhost:3000).
+
+### ⚙️ Переменные окружения (`.env`)
+
+```env
+# Supabase — Transaction Pooler (порт 6543)
+DATABASE_URL="postgresql://..."
+
+# Supabase — прямое соединение для миграций (порт 5432)
+DIRECT_URL="postgresql://..."
+
+# Секрет для NextAuth (любая длинная строка)
+NEXTAUTH_SECRET="your-secret-here"
+
+# URL вашего сайта
+NEXTAUTH_URL="https://your-app.vercel.app"
+
+# Ключ Google Gemini AI
+AI_API_KEY="AIza..."
+```
+
+### 🌐 Деплой на Vercel
+
+1. Форкните или запушьте репозиторий на GitHub
+2. Подключите проект на [vercel.com](https://vercel.com)
+3. Добавьте все переменные из `.env` в **Settings → Environment Variables**
+4. Готово — Vercel автоматически соберёт проект
 
 ---
 
-## 📱 PWA Support
-MotoLog is fully PWA-compatible. On mobile devices, use "Add to Home Screen" to install it as a standalone app with offline support and a native feel.
+## 🇬🇧 English
+
+### What is it?
+**MotoLog** is a personal diary for motorcyclists. Track your refueling, maintenance, and expenses across all your bikes in one place. Supports multiple vehicles, includes an AI assistant, and features Google Search embedded directly in the app.
+
+### ✨ Features
+- 🛠️ **Garage** — multiple bikes, photos, specs (engine displacement, power, weight)
+- ⛽ **Fuel Tracking** — liters, price, odometer, station name
+- 🔧 **Maintenance Log** — oil changes, repairs, parts with prices
+- 🔔 **Reminders** — by mileage or date (next service, oil change, etc.)
+- 🤖 **AI Assistant** — ask *"When did I last change my oil?"* or *"How much did I fill up last time?"*
+- 🔍 **Search** — Google Search embedded directly in the app
+- 📊 **Statistics** — average consumption, total costs by category
+- 📄 **Export** — PDF and CSV reports for sale or archiving
+- 📰 **News** — moto news for your region
+- 🌙 **Themes** — dark/light mode + 5 accent colors
+- 📱 **PWA** — installs on your phone as a native-like app
+
+### 🚀 Running Locally
+
+**Requirements:** Node.js 18+, pnpm
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/shadxwfxry/MotoLog.git
+cd MotoLog
+
+# 2. Install dependencies
+pnpm install
+
+# 3. Configure environment variables
+cp .env.example .env
+# Edit .env (see section below)
+
+# 4. Sync the database
+npx prisma db push
+
+# 5. Start the dev server
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+### ⚙️ Environment Variables (`.env`)
+
+```env
+# Supabase — Transaction Pooler (port 6543)
+DATABASE_URL="postgresql://..."
+
+# Supabase — Direct connection for migrations (port 5432)
+DIRECT_URL="postgresql://..."
+
+# NextAuth secret (any long random string)
+NEXTAUTH_SECRET="your-secret-here"
+
+# Your site URL
+NEXTAUTH_URL="https://your-app.vercel.app"
+
+# Google Gemini AI key
+AI_API_KEY="AIza..."
+```
+
+### 🌐 Deploy to Vercel
+
+1. Fork or push the repository to GitHub
+2. Connect the project at [vercel.com](https://vercel.com)
+3. Add all variables from `.env` in **Settings → Environment Variables**
+4. Done — Vercel will build and deploy automatically
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | [Next.js 14](https://nextjs.org/) (App Router) |
+| Database | [Supabase](https://supabase.com/) (PostgreSQL) |
+| ORM | [Prisma](https://www.prisma.io/) |
+| Auth | [NextAuth.js](https://next-auth.js.org/) |
+| Styling | [Tailwind CSS](https://tailwindcss.com/) |
+| AI | [Google Gemini](https://ai.google.dev/) |
+| Search | [Google CSE](https://programmablesearchengine.google.com/) |
+| Hosting | [Vercel](https://vercel.com/) |
+
+---
 
 ## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+
+MIT © [shadxwfxry](https://github.com/shadxwfxry)
 
 ---
 
-*Made with ❤️ for the moto community.*
+<div align="center">
+  <em>Made with ❤️ for the moto community · 🏍️ Ride safe</em>
+</div>
