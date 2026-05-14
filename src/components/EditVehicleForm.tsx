@@ -62,7 +62,16 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       )}
-      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("characteristics")}</h4>
+      
+      {/* Hidden inputs to pass validation schema */}
+      {/* @ts-ignore */}
+      <input type="hidden" name="make" value={defaultValues.make} />
+      {/* @ts-ignore */}
+      <input type="hidden" name="model" value={defaultValues.model} />
+      {/* @ts-ignore */}
+      <input type="hidden" name="year" value={defaultValues.year} />
+      
+      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("characteristics") || "Specs & Photo"}</h4>
       <div className="grid grid-cols-3 gap-2">
         <div className="flex flex-col gap-1">
           <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">{t("engine_cc")}</label>
@@ -98,6 +107,19 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
           />
         </div>
       </div>
+      
+      <div className="flex flex-col gap-1 mt-2">
+        <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Photo URL</label>
+        <input
+          name="photoUrl"
+          type="url"
+          // @ts-ignore
+          defaultValue={defaultValues.photoUrl ?? ""}
+          placeholder="https://example.com/photo.jpg"
+          className="w-full p-2.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+        />
+      </div>
+
       {error && (
         <div className="p-2 text-[10px] bg-destructive/10 text-destructive rounded border border-destructive/20 font-bold animate-in fade-in zoom-in duration-200">
           ⚠️ {error}

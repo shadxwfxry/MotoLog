@@ -65,9 +65,7 @@ export async function POST(req: Request) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        // @ts-ignore
-        tools: [{ googleSearchRetrieval: { dynamicRetrievalConfig: { mode: "MODE_DYNAMIC", dynamicThreshold: 0.3 } } }]
+        model: "gemini-pro",
       });
 
       const prompt = `You are MotoAssistant, an expert motorcycle AI mechanic.
