@@ -1,6 +1,47 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { HomeClient } from "./HomeClient";
+import { fetchMotoNews } from "@/lib/rss";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const session = await getServerSession(authOptions);
+
+  if (session) {
+    const user = await prisma.user.findUnique({
+      where: { email: session.user!.email! },
+      include: { vehicles: true, settings: true },
+    });
+
+    const vehicleIds = user?.vehicles.map((v) => v.id) ?? [];
+    
+    // Fetch user region preference or default to all
+    const regionPref = user?.settings?.newsPreferences || "Global";
+
+    const [refuels, maintenance, news] = await Promise.all([
+      prisma.refuelingLog.findMany({
+        where: { vehicleId: { in: vehicleIds } },
+        orderBy: { date: "desc" },
+        include: { vehicle: true },
+      }),
+      prisma.maintenanceLog.findMany({
+        where: { vehicleId: { in: vehicleIds } },
+        orderBy: { date: "desc" },
+        include: { 
+          vehicle: true,
+          parts: true 
+        },
+      }),
+      fetchMotoNews(regionPref),
+    ]);
+
+    return <HomeClient refuels={refuels} maintenance={maintenance} news={news} />;
+  }
+
+  // Not Authenticated: Show Landing Page
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-6rem)] px-6 text-center">
       {/* Hero */}

@@ -15,6 +15,16 @@ model User {
   currency  String    @default("₴")
   unitSystem String   @default("metric") // "metric" (km/L) | "imperial" (mi/gal)
   vehicles  Vehicle[]
+  settings  UserSettings?
+}
+
+model UserSettings {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  newsPreferences String  @default("all") // JSON or comma-separated
+  theme           String  @default("dark") // light, dark
+  accentColor     String  @default("#3b82f6") // Default blue
 }
 
 model Vehicle {
@@ -22,6 +32,8 @@ model Vehicle {
   make                String
   model               String
   year                Int
+  brandName           String?              // e.g. "Honda"
+  photoUrl            String?
   type                String               @default("motorcycle") // motorcycle, scooter, atv, car
   engineDisplacement  Int?
   power               Int?

@@ -4,6 +4,8 @@ export const vehicleSchema = z.object({
   make: z.string().min(1, "Make is required"),
   model: z.string().min(1, "Model is required"),
   year: z.preprocess((val) => parseInt(val as string, 10), z.number().min(1900).max(new Date().getFullYear() + 1)),
+  brandName: z.string().nullable().optional(),
+  photoUrl: z.string().url().nullable().or(z.literal("")).optional(),
   engineDisplacement: z.preprocess((val) => val ? parseInt(val as string, 10) : null, z.number().nullable().optional()),
   power: z.preprocess((val) => val ? parseInt(val as string, 10) : null, z.number().nullable().optional()),
   weight: z.preprocess((val) => val ? parseInt(val as string, 10) : null, z.number().nullable().optional()),

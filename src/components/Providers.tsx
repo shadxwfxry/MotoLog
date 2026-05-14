@@ -2,13 +2,24 @@
 
 import { SessionProvider } from "next-auth/react";
 import { LanguageProvider } from "./LanguageProvider";
+import { VisualThemeProvider } from "./VisualThemeProvider";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ 
+  children, 
+  initialTheme, 
+  initialAccent 
+}: { 
+  children: React.ReactNode, 
+  initialTheme?: string, 
+  initialAccent?: string 
+}) {
   return (
     <SessionProvider>
-      <LanguageProvider>
-        {children}
-      </LanguageProvider>
+      <VisualThemeProvider initialTheme={initialTheme} initialAccent={initialAccent}>
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
+      </VisualThemeProvider>
     </SessionProvider>
   );
 }

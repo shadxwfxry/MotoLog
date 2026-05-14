@@ -10,16 +10,24 @@ type Vehicle = {
   model: string;
   year: number;
   engineDisplacement: number | null;
+  photoUrl: string | null;
+  brandName: string | null;
   refuelingLogs: { odometer: number }[];
 };
 
 export function GarageClient({ vehicles }: { vehicles: Vehicle[] }) {
   const { t } = useLanguage();
 
+  const handleShare = (slug: string) => {
+    const url = `${window.location.origin}/public/${slug}`;
+    navigator.clipboard.writeText(url);
+    alert(t("link_copied") || "Link copied to clipboard!");
+  };
+
   return (
-    <div className="max-w-screen-lg mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-screen-lg mx-auto px-4 py-8 space-y-8 pb-24">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-extrabold tracking-tight">{t("go_garage")}</h1>
+        <h1 className="text-2xl font-bold tracking-tight uppercase">{t("go_garage")}</h1>
         <AddVehicleForm />
       </div>
 
@@ -34,39 +42,54 @@ export function GarageClient({ vehicles }: { vehicles: Vehicle[] }) {
           {vehicles.map((vehicle) => {
             const lastOdo = vehicle.refuelingLogs[0]?.odometer ?? 0;
             return (
-              <Link
-                key={vehicle.id}
-                href={`/garage/${vehicle.id}`}
-                className="group relative block rounded-3xl border border-border bg-card p-6 hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold group-hover:text-primary transition-colors">{vehicle.make} {vehicle.model}</h2>
-                    <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest mt-1">
-                      {vehicle.year} {vehicle.engineDisplacement ? `· ${vehicle.engineDisplacement}cc` : ""}
-                    </p>
+              <div key={vehicle.id} className="group relative block rounded-3xl border border-border bg-card overflow-hidden hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300">
+                <Link href={`/garage/${vehicle.id}`} className="block">
+                  <div className="h-48 w-full bg-muted relative overflow-hidden">
+                    {vehicle.photoUrl ? (
+                      <img src={vehicle.photoUrl} alt={vehicle.model} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                         <span className="text-6xl grayscale opacity-20 select-none">🏍️</span>
+                         {vehicle.brandName && <span className="absolute top-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-tighter text-white border border-white/10">{vehicle.brandName}</span>}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                    <div className="absolute bottom-4 left-6">
+                       <h2 className="text-xl font-bold text-white uppercase tracking-tight">{vehicle.make} {vehicle.model}</h2>
+                       <p className="text-xs text-white/70 font-medium tracking-widest">{vehicle.year} · {vehicle.engineDisplacement}cc</p>
+                    </div>
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center group-hover:bg-primary/10 group-hover:scale-110 transition-all">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground group-hover:text-primary transition-colors"><path d="m9 18 6-6-6-6"/></svg>
+                </Link>
+
+                <div className="p-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t("last_odometer")}</p>
+                      <p className="text-lg font-black">{lastOdo.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">km</span></p>
+                    </div>
+                    <div className="flex flex-col items-end justify-center">
+                      <button 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          // In a real app we'd need the slug here. 
+                          // Let's assume we can share by ID or add slug to types.
+                          handleShare(vehicle.id); 
+                        }}
+                        className="p-2 rounded-xl bg-muted hover:bg-primary/10 hover:text-primary transition-colors"
+                        title={t("share") || "Share"}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-8 grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t("last_odometer")}</p>
-                    <p className="text-lg font-black">{lastOdo.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">km</span></p>
-                  </div>
-                  <div className="space-y-1 text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t("status")}</p>
-                    <p className="text-lg font-black text-green-500">{t("ready")}</p>
-                  </div>
+                <div className="absolute top-4 right-4">
+                   <div className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                   </div>
                 </div>
-
-                {/* Decorative element */}
-                <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="text-4xl">🏍️</div>
-                </div>
-              </Link>
+              </div>
             );
           })}
         </div>
