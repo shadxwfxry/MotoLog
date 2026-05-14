@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const results: any[] = [];
 
     // More resilient parsing: look for result containers
-    const resultMatches = html.matchAll(/<div class="[^"]*result[^"]*">([\s\S]*?)<\/div>/g);
+    const resultMatches = Array.from(html.matchAll(/<div class="[^"]*result[^"]*">([\s\S]*?)<\/div>/g));
     
     for (const match of resultMatches) {
       const block = match[1];
