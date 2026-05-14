@@ -13,4 +13,4 @@ echo "Seeding database..."
 npx prisma db seed
 
 echo "Starting Next.js app..."
-npm run dev
+pnpm run dev
