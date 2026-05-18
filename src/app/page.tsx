@@ -50,9 +50,9 @@ export default async function Home() {
 
     return (
       <HomeClient
-        refuels={refuels}
-        maintenance={maintenance}
-        vehicles={user?.vehicles || []}
+        refuels={JSON.parse(JSON.stringify(refuels))}
+        maintenance={JSON.parse(JSON.stringify(maintenance))}
+        vehicles={JSON.parse(JSON.stringify(user?.vehicles || []))}
       />
     );
   }
