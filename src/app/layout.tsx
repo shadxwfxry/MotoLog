@@ -31,6 +31,7 @@ export const viewport = {
 
 import { Header } from "@/components/Header";
 import { OfflineSyncProvider } from "@/components/OfflineSyncProvider";
+import { PwaUpdater } from "@/components/PwaUpdater";
 
 export default async function RootLayout({
   children,
@@ -65,6 +66,7 @@ export default async function RootLayout({
               </main>
               <Navigation />
             </div>
+            <PwaUpdater />
           </OfflineSyncProvider>
         </Providers>
       </body>
