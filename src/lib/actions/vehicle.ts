@@ -136,3 +136,23 @@ export async function updateUserSettings(theme: string, accentColor: string, new
 
   revalidatePath("/dashboard");
 }
+
+export async function updateVehicleSpecs(vehicleId: string, specs: Record<string, string>) {
+  const user = await getAuthUser();
+
+  const vehicle = await prisma.vehicle.findFirst({
+    where: { id: vehicleId, userId: user.id },
+  });
+
+  if (!vehicle) {
+    return { error: "Vehicle not found or access denied" };
+  }
+
+  await prisma.vehicle.update({
+    where: { id: vehicleId },
+    data: { specs },
+  });
+
+  revalidatePath(`/garage/${vehicleId}`);
+  return { success: true };
+}

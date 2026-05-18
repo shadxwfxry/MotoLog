@@ -43,6 +43,7 @@ model Vehicle {
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   isPublic            Boolean              @default(false)
   slug                String               @unique @default(uuid())
+  specs               Json?
   refuelingLogs       RefuelingLog[]
   maintenanceLogs     MaintenanceLog[]
   plannedMaintenances PlannedMaintenance[]

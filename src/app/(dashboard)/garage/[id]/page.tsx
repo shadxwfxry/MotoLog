@@ -13,6 +13,8 @@ import { LogActions } from "@/components/LogActions";
 import { ExportPdfButton } from "@/components/ExportPdfButton";
 import { QrCodeButton } from "@/components/QrCodeButton";
 
+import { SpecsSection } from "@/components/SpecsSection";
+
 export const dynamic = "force-dynamic";
 
 export default async function VehicleDetailPage({ params }: { params: { id: string } }) {
@@ -128,6 +130,8 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
               <AddMaintenanceForm vehicleId={vehicle.id} />
             </div>
           </div>
+
+          <SpecsSection vehicleId={vehicle.id} initialSpecs={vehicle.specs} />
         </div>
 
         {/* Right Column: Logs & Reminders */}

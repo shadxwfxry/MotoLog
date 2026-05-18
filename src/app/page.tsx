@@ -12,7 +12,22 @@ export default async function Home() {
   if (session) {
     const user = await prisma.user.findUnique({
       where: { email: session.user!.email! },
-      include: { vehicles: true, settings: true },
+      include: {
+        vehicles: {
+          include: {
+            refuelingLogs: { orderBy: { odometer: "desc" }, take: 1 },
+            maintenanceLogs: { orderBy: { odometer: "desc" }, take: 1 },
+            plannedMaintenances: {
+              where: { isCompleted: false },
+              orderBy: [
+                { targetOdometer: "asc" },
+                { targetDate: "asc" }
+              ]
+            }
+          }
+        },
+        settings: true
+      },
     });
 
     const vehicleIds = user?.vehicles.map((v) => v.id) ?? [];
@@ -33,7 +48,13 @@ export default async function Home() {
       }),
     ]);
 
-    return <HomeClient refuels={refuels} maintenance={maintenance} />;
+    return (
+      <HomeClient
+        refuels={refuels}
+        maintenance={maintenance}
+        vehicles={user?.vehicles || []}
+      />
+    );
   }
 
   // Not Authenticated: Show Landing Page
