@@ -30,6 +30,7 @@ export const viewport = {
 };
 
 import { Header } from "@/components/Header";
+import { OfflineSyncProvider } from "@/components/OfflineSyncProvider";
 
 export default async function RootLayout({
   children,
@@ -56,13 +57,15 @@ export default async function RootLayout({
     <html lang="en" className={`${theme} ${accent}`}>
       <body className={inter.className}>
         <Providers initialTheme={theme} initialAccent={accent}>
-          <div className="flex flex-col min-h-screen pb-20">
-            <Header />
-            <main className="flex-1">
-              {children}
-            </main>
-            <Navigation />
-          </div>
+          <OfflineSyncProvider>
+            <div className="flex flex-col min-h-screen pb-20">
+              <Header />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Navigation />
+            </div>
+          </OfflineSyncProvider>
         </Providers>
       </body>
     </html>

@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { addRefuelLog } from "@/lib/actions/refuel";
 import { useLanguage } from "./LanguageProvider";
+import { addToSyncQueue } from "@/lib/offlineSync";
 
 export function AddRefuelForm({ vehicleId }: { vehicleId: string }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState(false);
+  const [offlineSaved, setOfflineSaved] = useState(false);
   const [liters, setLiters] = useState("");
   const [ppl, setPpl] = useState(""); // price per liter
   const [cost, setCost] = useState("");
@@ -45,6 +47,21 @@ export function AddRefuelForm({ vehicleId }: { vehicleId: string }) {
     formData.set("pricePerLiter", ppl);
     formData.set("cost", cost);
     formData.set("odometer", odo);
+
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      const payload: Record<string, string> = { vehicleId };
+      formData.forEach((value, key) => {
+        payload[key] = value.toString();
+      });
+
+      await addToSyncQueue("REFUEL", payload);
+      setOfflineSaved(true);
+      setOpen(false);
+      setLiters(""); setPpl(""); setCost(""); setOdo("");
+      setTimeout(() => setOfflineSaved(false), 4000);
+      return;
+    }
+
     await addRefuelLog(vehicleId, formData);
     setAdded(true);
     setOpen(false);
@@ -56,9 +73,13 @@ export function AddRefuelForm({ vehicleId }: { vehicleId: string }) {
     <div className="mt-2">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full py-2.5 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+        className={`w-full py-2.5 rounded-xl border border-dashed text-sm transition-colors ${
+          offlineSaved 
+            ? "border-blue-500 bg-blue-500/10 text-blue-400 font-bold" 
+            : "border-border text-muted-foreground hover:border-primary hover:text-primary"
+        }`}
       >
-        {added ? "✓ Added!" : `⛽ ${t("add_refuel")}`}
+        {added ? "✓ Added!" : offlineSaved ? `💾 ${lang === "uk" ? "Збережено локально!" : lang === "ru" ? "Сохранено локально!" : "Saved locally!"}` : `⛽ ${t("add_refuel")}`}
       </button>
 
       {open && (

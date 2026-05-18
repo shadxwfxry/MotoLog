@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { addMaintenanceLog } from "@/lib/actions/maintenance";
 import { useLanguage } from "./LanguageProvider";
+import { addToSyncQueue } from "@/lib/offlineSync";
 
 const CATEGORY_PRESETS: Record<string, string[]> = {
   service: ["Oil Change", "Air Filter", "Oil Filter", "Spark Plugs", "Coolant Flush", "Brake Fluid", "Full Service"],
@@ -11,9 +12,10 @@ const CATEGORY_PRESETS: Record<string, string[]> = {
 };
 
 export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState(false);
+  const [offlineSaved, setOfflineSaved] = useState(false);
   const [category, setCategory] = useState("service");
   const [customType, setCustomType] = useState("");
   const [selectedPreset, setSelectedPreset] = useState("");
@@ -29,6 +31,21 @@ export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
     formData.set("category", category);
     formData.set("type", customType || selectedPreset || "Other");
     formData.set("odometer", odo);
+
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      const payload: Record<string, string> = { vehicleId };
+      formData.forEach((value, key) => {
+        payload[key] = value.toString();
+      });
+
+      await addToSyncQueue("MAINTENANCE", payload);
+      setOfflineSaved(true);
+      setOpen(false);
+      setCustomType(""); setSelectedPreset(""); setOdo("");
+      setTimeout(() => setOfflineSaved(false), 4000);
+      return;
+    }
+
     await addMaintenanceLog(vehicleId, formData);
     setAdded(true);
     setOpen(false);
@@ -46,9 +63,13 @@ export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
     <div className="mt-2">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full py-2.5 rounded-xl border border-dashed border-border text-sm text-muted-foreground hover:border-orange-400 hover:text-orange-400 transition-colors"
+        className={`w-full py-2.5 rounded-xl border border-dashed text-sm transition-colors ${
+          offlineSaved 
+            ? "border-blue-500 bg-blue-500/10 text-blue-400 font-bold" 
+            : "border-border text-muted-foreground hover:border-orange-400 hover:text-orange-400 transition-colors"
+        }`}
       >
-        {added ? "✓ Saved!" : `🔧 ${t("add_service")}`}
+        {added ? "✓ Saved!" : offlineSaved ? `💾 ${lang === "uk" ? "Збережено локально!" : lang === "ru" ? "Сохранено локально!" : "Saved locally!"}` : `🔧 ${t("add_service")}`}
       </button>
 
       {open && (
