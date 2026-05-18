@@ -87,13 +87,6 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
     .sort((a, b) => b.priority - a.priority)
     .slice(0, 2);
 
-  const handleOfflineNav = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      e.preventDefault();
-      window.location.href = href;
-    }
-  };
-
   return (
     <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6 pb-24">
       {/* Welcome header */}
@@ -167,7 +160,6 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
           {activeVehicle ? (
             <Link
               href={`/garage/${activeVehicle.id}`}
-              onClick={(e) => handleOfflineNav(e, `/garage/${activeVehicle.id}`)}
               className="w-full h-11 text-xs font-black uppercase tracking-wider rounded-xl bg-muted hover:bg-primary hover:text-primary-foreground border border-border flex items-center justify-center transition active:scale-95"
             >
               {lang === "uk" ? "До гаражу" : lang === "ru" ? "В гараж" : "Go to Garage"} →
@@ -175,7 +167,6 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
           ) : (
             <Link
               href="/garage"
-              onClick={(e) => handleOfflineNav(e, "/garage")}
               className="w-full h-11 text-xs font-black uppercase tracking-wider rounded-xl bg-primary text-primary-foreground flex items-center justify-center transition active:scale-95 shadow-md shadow-primary/20"
             >
               ➕ {lang === "uk" ? "Додати байк" : lang === "ru" ? "Добавить байк" : "Add Vehicle"}
@@ -251,7 +242,6 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
 
           <Link
             href="/garage"
-            onClick={(e) => handleOfflineNav(e, "/garage")}
             className="w-full h-11 text-xs font-black uppercase tracking-wider rounded-xl bg-muted hover:bg-primary hover:text-primary-foreground border border-border flex items-center justify-center transition active:scale-95"
           >
             {lang === "uk" ? "Переглянути все" : lang === "ru" ? "Посмотреть все" : "View All"} →

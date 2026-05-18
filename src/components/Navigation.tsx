@@ -69,13 +69,6 @@ export function Navigation() {
     },
   ];
 
-  const handleOfflineNav = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      e.preventDefault();
-      window.location.href = href;
-    }
-  };
-
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-50 pb-safe">
       <div className="max-w-screen-lg mx-auto px-2 py-2 flex items-center justify-center gap-1">
@@ -87,7 +80,6 @@ export function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={(e) => handleOfflineNav(e, item.href)}
                 className={`flex flex-col items-center gap-1 p-2 px-4 rounded-xl transition-all text-[10px] font-bold uppercase tracking-tighter ${
                   isActive
                     ? "text-primary bg-primary/10"
