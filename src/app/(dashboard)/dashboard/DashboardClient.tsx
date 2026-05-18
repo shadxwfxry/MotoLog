@@ -45,10 +45,44 @@ export function DashboardClient({ refuels, maintenance }: Props) {
     return new Date(date).toLocaleDateString(lang);
   };
 
-  // ── Fuel stats ──────────────────────────────────────────────────────────
+  // ── Fuel stats & Full-to-Full Fuel Consumption ──────────────────────────
   const totalFuelCost = refuels.reduce((s, l) => s + l.cost, 0);
   const totalLiters = refuels.reduce((s, l) => s + l.liters, 0);
   const avgPricePerL = totalLiters > 0 ? totalFuelCost / totalLiters : 0;
+
+  // Group refuels by vehicle to calculate Full-to-Full consumption per vehicle
+  const refuelsByVehicle: Record<string, Refuel[]> = {};
+  for (const r of refuels) {
+    const key = (r as any).vehicleId || `${r.vehicle.make} ${r.vehicle.model}`;
+    if (!refuelsByVehicle[key]) {
+      refuelsByVehicle[key] = [];
+    }
+    refuelsByVehicle[key].push(r);
+  }
+
+  let totalWeightedKm = 0;
+  let totalWeightedLiters = 0;
+
+  for (const [_, list] of Object.entries(refuelsByVehicle)) {
+    // Sort refuels by odometer ascending
+    const sorted = [...list].sort((a, b) => a.odometer - b.odometer);
+    if (sorted.length >= 2) {
+      const minOdometer = sorted[0].odometer;
+      const maxOdometer = sorted[sorted.length - 1].odometer;
+      const path = maxOdometer - minOdometer;
+      
+      if (path > 0) {
+        // sum liters of all refuels except the first
+        const litersWithoutFirst = sorted.slice(1).reduce((s, r) => s + r.liters, 0);
+        totalWeightedKm += path;
+        totalWeightedLiters += litersWithoutFirst;
+      }
+    }
+  }
+
+  const averageWeightedConsumption = totalWeightedKm > 0 
+    ? (totalWeightedLiters / totalWeightedKm) * 100 
+    : null;
 
   // Station map
   const stationMap: Record<string, { count: number; cost: number; liters: number }> = {};
@@ -103,10 +137,11 @@ export function DashboardClient({ refuels, maintenance }: Props) {
       </div>
 
       {/* ── Summary cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <StatCard label={t("total_fuel_cost")} value={`${totalFuelCost.toFixed(0)} ₴`} accent />
         <StatCard label={t("total_liters")} value={`${totalLiters.toFixed(1)} L`} />
         <StatCard label={t("avg_price_l")} value={avgPricePerL > 0 ? `${avgPricePerL.toFixed(2)} ₴` : "—"} />
+        <StatCard label={t("fuel_consumption")} value={averageWeightedConsumption !== null ? `${averageWeightedConsumption.toFixed(1)} л/100 км` : "—"} />
         <StatCard label={t("total_maint_cost")} value={`${totalMaintCost.toFixed(0)} ₴`} warn={totalMaintCost > 0} />
       </div>
 
