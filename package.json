@@ -35,11 +35,13 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
+    "babel-loader": "^10.1.1",
     "eslint": "^8",
     "eslint-config-next": "14.1.0",
     "postcss": "^8",
