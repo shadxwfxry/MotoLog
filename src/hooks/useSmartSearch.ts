@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { LogEntry } from "@/types";
+import type { LogEntry, RefuelingLog, MaintenanceLog } from "@/types";
+
+type RefuelWithVehicle = RefuelingLog & { vehicle: { make: string; model: string } };
+type MaintWithVehicle = MaintenanceLog & { vehicle: { make: string; model: string } };
 
 interface UseSmartSearchProps {
-  refuels: any[];
-  maintenance: any[];
+  refuels: RefuelWithVehicle[];
+  maintenance: MaintWithVehicle[];
 }
 
 interface AiResult {

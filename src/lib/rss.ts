@@ -1,8 +1,9 @@
 import Parser from "rss-parser";
+import { unstable_cache } from "next/cache";
 
 const parser = new Parser();
 
-export async function fetchMotoNews(region: string = "Global") {
+async function getRawMotoNews(region: string = "Global") {
   let feeds: string[] = [];
 
   switch (region) {
@@ -65,3 +66,10 @@ export async function fetchMotoNews(region: string = "Global") {
     return [];
   }
 }
+
+// Export wrapped cache function
+export const fetchMotoNews = unstable_cache(
+  async (region: string = "Global") => getRawMotoNews(region),
+  ["moto-news-cache"],
+  { revalidate: 1800 } // Cache for 1800 seconds (30 minutes)
+);

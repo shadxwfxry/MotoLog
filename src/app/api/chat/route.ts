@@ -10,22 +10,19 @@ export async function POST(req: Request) {
 
   const { query } = await req.json();
 
-  const vehicles = await prisma.vehicle.findMany({
-    where: { userId: session.user.id },
-    select: { id: true, make: true, model: true }
-  });
-
-  const vehicleIds = vehicles.map(v => v.id);
-
   const [recentRefuels, recentMaint] = await Promise.all([
     prisma.refuelingLog.findMany({
-      where: { vehicleId: { in: vehicleIds } },
+      where: {
+        vehicle: { userId: session.user.id }
+      },
       orderBy: { date: "desc" },
       take: 25,
       include: { vehicle: { select: { make: true, model: true } } }
     }),
     prisma.maintenanceLog.findMany({
-      where: { vehicleId: { in: vehicleIds } },
+      where: {
+        vehicle: { userId: session.user.id }
+      },
       orderBy: { date: "desc" },
       take: 25,
       include: { vehicle: { select: { make: true, model: true } } }

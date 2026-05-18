@@ -33,10 +33,12 @@ export function VisualThemeProvider({
 
   const applyTheme = (t: string, a: string) => {
     const html = document.documentElement;
-    // Remove all theme classes
-    html.className.split(' ').forEach(cls => {
-      if (cls.startsWith("theme-")) html.classList.remove(cls);
-    });
+    // Safe reset of old accent classes to prevent split crashes on empty className
+    if (html.className) {
+      html.className.split(' ').forEach(cls => {
+        if (cls.startsWith("theme-")) html.classList.remove(cls);
+      });
+    }
     
     // Add new accent class
     if (a) {
