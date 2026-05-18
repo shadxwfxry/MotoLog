@@ -25,7 +25,7 @@ export default async function TournamentsPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="w-full flex flex-col h-[calc(100vh-57px-73px)] sm:h-[calc(100vh-57px-73px)] md:h-[calc(100vh-57px-73px)] overflow-hidden bg-background">
+    <div className="w-full flex flex-col h-[calc(100dvh-57px-73px)] overflow-hidden bg-background">
       {/* Premium Toggle Bar */}
       <div className="w-full bg-card/60 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between gap-4 h-[56px] shadow-sm flex-shrink-0">
         <span className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-2">
@@ -47,7 +47,7 @@ export default async function TournamentsPage({ searchParams }: PageProps) {
       <div className="flex-1 w-full relative overflow-hidden bg-background">
         <iframe
           src={finalUrl}
-          className="w-full h-full border-0 m-0 p-0 bg-background"
+          className="w-full h-full absolute inset-0 border-0 m-0 p-0 bg-background"
           title="Tournaments"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen

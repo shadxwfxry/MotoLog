@@ -6,7 +6,7 @@ import { useLanguage } from "./LanguageProvider";
 
 export function Header() {
   const { t, lang, setLang } = useLanguage();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-sm">
@@ -33,7 +33,9 @@ export function Header() {
             ))}
           </div>
 
-          {session ? (
+          {status === "loading" ? (
+            <div className="w-20 h-9 bg-muted animate-pulse rounded-md" />
+          ) : session ? (
             <div className="flex items-center gap-2">
               <Link
                 href="/settings"

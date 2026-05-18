@@ -3,7 +3,6 @@ import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { HomeClient } from "./HomeClient";
-import { fetchMotoNews } from "@/lib/rss";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +16,8 @@ export default async function Home() {
     });
 
     const vehicleIds = user?.vehicles.map((v) => v.id) ?? [];
-    
-    // Fetch user region preference or default to all
-    const regionPref = user?.settings?.newsPreferences || "Global";
 
-    const [refuels, maintenance, news] = await Promise.all([
+    const [refuels, maintenance] = await Promise.all([
       prisma.refuelingLog.findMany({
         where: { vehicleId: { in: vehicleIds } },
         orderBy: { date: "desc" },
@@ -35,10 +31,9 @@ export default async function Home() {
           parts: true 
         },
       }),
-      fetchMotoNews(regionPref),
     ]);
 
-    return <HomeClient refuels={refuels} maintenance={maintenance} news={news} />;
+    return <HomeClient refuels={refuels} maintenance={maintenance} />;
   }
 
   // Not Authenticated: Show Landing Page

@@ -55,13 +55,25 @@ export function Navigation() {
         </svg>
       ),
     },
+    {
+      href: "/news",
+      label: t("moto_news") || "News",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/>
+          <path d="M18 14h-8"/>
+          <path d="M15 18h-5"/>
+          <path d="M10 6h8v4h-8V6Z"/>
+        </svg>
+      ),
+    },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border z-50 pb-safe">
       <div className="max-w-screen-lg mx-auto px-2 py-2 flex items-center justify-center gap-1">
         {/* Nav links */}
-        <div className="flex w-full max-w-md justify-around items-center">
+        <div className="flex w-full max-w-xl justify-around items-center">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
