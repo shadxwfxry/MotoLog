@@ -5,6 +5,7 @@ const runtimeCaching = [
   {
     urlPattern: /\/api\/auth\/.*/i,
     handler: 'NetworkOnly',
+    options: {},
   },
   {
     urlPattern: /.*_rsc=.*/i,
