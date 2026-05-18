@@ -113,6 +113,9 @@ const translations: Translations = {
     tap_to_upload: "Tap to upload photo",
     initial_odometer: "Initial Odometer (km)",
     edit_specs_photo: "Edit Specs & Photo",
+    tournaments: "Tournaments",
+    qr_for_tournament: "QR for Tournament",
+    close: "Close",
   },
   ru: {
     home: "Главная",
@@ -218,6 +221,9 @@ const translations: Translations = {
     tap_to_upload: "Нажмите, чтобы загрузить",
     initial_odometer: "Начальный пробег (км)",
     edit_specs_photo: "Изменить фото и ТТХ",
+    tournaments: "Турниры",
+    qr_for_tournament: "QR для Турнира",
+    close: "Закрыть",
   },
   uk: {
     home: "Головна",
@@ -323,6 +329,9 @@ const translations: Translations = {
     tap_to_upload: "Натисніть для завантаження",
     initial_odometer: "Початковий пробіг (км)",
     edit_specs_photo: "Змінити фото та ТТХ",
+    tournaments: "Турніри",
+    qr_for_tournament: "QR для Турніру",
+    close: "Закрити",
   },
 };
 

@@ -11,6 +11,7 @@ import { RemindersSection } from "@/components/RemindersSection";
 import { VehicleActions } from "@/components/VehicleActions";
 import { LogActions } from "@/components/LogActions";
 import { ExportPdfButton } from "@/components/ExportPdfButton";
+import { QrCodeButton } from "@/components/QrCodeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +116,8 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                   avgCons: avgConsumption
                 }}
               />
+
+              <QrCodeButton vehicleId={vehicle.id} vehicleName={`${vehicle.make} ${vehicle.model}`} />
             </div>
           </div>
 
