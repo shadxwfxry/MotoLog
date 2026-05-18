@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage } from "./LanguageProvider";
 
-export function PwaUpdater() {
+export function PwaManager() {
   const { lang } = useLanguage();
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [showBanner, setShowBanner] = useState(false);
@@ -52,7 +52,10 @@ export function PwaUpdater() {
   }, []);
 
   const handleUpdateApp = () => {
-    if (!registration || !registration.waiting) return;
+    if (!registration || !registration.waiting) {
+      window.location.reload();
+      return;
+    }
     // Post SKIP_WAITING to let the waiting service worker take over
     registration.waiting.postMessage({ type: "SKIP_WAITING" });
   };
@@ -69,10 +72,10 @@ export function PwaUpdater() {
           </h4>
           <p className="text-[10px] text-muted-foreground mt-0.5 font-medium leading-relaxed">
             {lang === "uk"
-              ? "Нова версія MotoLog завантажена. Оновіть додаток, щоб застосувати зміни."
+              ? "Доступна нова версія гаража! Оновіть додаток, щоб застосувати зміни."
               : lang === "ru"
-              ? "Новая версия MotoLog загружена. Обновите приложение, чтобы применить изменения."
-              : "A new version of MotoLog has been loaded. Reload to apply updates."}
+              ? "Доступна новая версия гаража! Обновите приложение, чтобы применить изменения."
+              : "A new version of the garage is available! Reload the app to apply updates."}
           </p>
         </div>
       </div>
