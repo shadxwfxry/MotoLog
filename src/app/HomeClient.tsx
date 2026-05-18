@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
 import { SmartSearch } from "@/components/SmartSearch";
