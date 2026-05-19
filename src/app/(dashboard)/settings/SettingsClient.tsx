@@ -15,7 +15,7 @@ const THEMES = [
 ];
 
 export function SettingsClient({ settings }: { settings: any }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { theme, setTheme, accentColor, setAccentColor } = useVisualTheme();
   
   const [localTheme, setLocalTheme] = useState(settings?.theme || theme);
@@ -61,6 +61,12 @@ export function SettingsClient({ settings }: { settings: any }) {
                     className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${localTheme === 'dark' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
                   >
                     {t("dark")}
+                  </button>
+                  <button 
+                    onClick={() => setLocalTheme("journal")}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${localTheme === 'journal' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                  >
+                    {lang === "uk" ? "Журнал" : lang === "ru" ? "Журнал" : "Journal"}
                   </button>
                </div>
             </div>

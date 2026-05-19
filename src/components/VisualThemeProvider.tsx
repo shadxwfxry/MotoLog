@@ -45,11 +45,17 @@ export function VisualThemeProvider({
       html.classList.add(a);
     }
     
-    // Set theme (dark/light)
-    if (t === "dark") {
+    // Set theme (dark/light/journal)
+    if (t === "journal") {
       html.classList.add("dark");
+      html.classList.add("theme-journal");
     } else {
-      html.classList.remove("dark");
+      html.classList.remove("theme-journal");
+      if (t === "dark") {
+        html.classList.add("dark");
+      } else {
+        html.classList.remove("dark");
+      }
     }
   };
 

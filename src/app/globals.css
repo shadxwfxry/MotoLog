@@ -53,6 +53,66 @@
   .theme-red { --primary: 0 84.2% 60.2%; --ring: 0 84.2% 60.2%; }
   .theme-purple { --primary: 262.1 83.3% 57.8%; --ring: 262.1 83.3% 57.8%; }
   .theme-yellow { --primary: 47.9 95.8% 53.1%; --ring: 47.9 95.8% 53.1%; }
+
+  .theme-journal {
+    --background: 220 17% 7%;
+    --foreground: 216 15% 97%;
+    --card: 220 17% 12%;
+    --card-foreground: 216 15% 97%;
+    --popover: 220 17% 12%;
+    --popover-foreground: 216 15% 97%;
+    --primary: 25 100% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 198 100% 59%;
+    --secondary-foreground: 0 0% 8%;
+    --muted: 218 15% 19%;
+    --muted-foreground: 218 14% 65%;
+    --accent: 218 15% 19%;
+    --accent-foreground: 216 15% 97%;
+    --border: 218 15% 25%;
+    --input: 218 15% 19%;
+    --ring: 25 100% 50%;
+  }
+
+  .theme-journal h1,
+  .theme-journal h2,
+  .theme-journal h3,
+  .theme-journal h4,
+  .theme-journal h5,
+  .theme-journal h6,
+  .theme-journal .font-title {
+    font-family: var(--font-bebas), sans-serif !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+  }
+
+  .theme-journal .font-black,
+  .theme-journal .font-extrabold {
+    font-family: var(--font-mono), monospace !important;
+    letter-spacing: -0.02em;
+  }
+
+  .theme-journal hr,
+  .theme-journal .border-dashed {
+    border-style: dashed !important;
+    border-color: rgba(255, 106, 0, 0.45) !important;
+  }
+
+  .theme-journal .bg-card,
+  .theme-journal .border-border {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .theme-journal .bg-card:hover {
+    box-shadow: 0 10px 30px -10px rgba(255, 106, 0, 0.18) !important;
+    border-color: rgba(255, 106, 0, 0.35) !important;
+    transform: translateY(-2px);
+  }
+
+  .theme-journal button.bg-primary:hover,
+  .theme-journal .bg-primary:hover {
+    box-shadow: 0 0 20px rgba(255, 106, 0, 0.55) !important;
+  }
 }
 
 @layer base {
