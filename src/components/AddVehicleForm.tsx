@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import { addVehicle } from "@/lib/actions/vehicle";
 import { useLanguage } from "./LanguageProvider";
 import { compressImage } from "@/lib/imageUtils";
+import { addToSyncQueue } from "@/lib/offlineSync";
+import { db } from "@/lib/dexie";
 
 export function AddVehicleForm() {
   const { t } = useLanguage();
@@ -31,6 +33,40 @@ export function AddVehicleForm() {
     
     if (photoBase64) {
       formData.set("photoUrl", photoBase64);
+    }
+
+    if (typeof window !== "undefined" && !navigator.onLine) {
+      const payload: Record<string, string> = {};
+      formData.forEach((value, key) => {
+        payload[key] = value.toString();
+      });
+
+      const tempId = `temp_${Date.now()}`;
+      payload.tempId = tempId;
+
+      try {
+        await addToSyncQueue("ADD_VEHICLE", payload);
+        await db.vehicles.put({
+          id: tempId,
+          make: payload.make,
+          model: payload.model,
+          year: Number(payload.year),
+          engineDisplacement: payload.engineDisplacement ? Number(payload.engineDisplacement) : null,
+          photoUrl: photoBase64 || null,
+          brandName: payload.brandName || null,
+          refuelingLogs: [],
+          maintenanceLogs: [],
+          plannedMaintenances: [],
+          specs: null,
+        });
+        setIsOpen(false);
+        setPhotoBase64("");
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
     }
 
     try {

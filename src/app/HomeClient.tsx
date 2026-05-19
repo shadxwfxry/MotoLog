@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
 import { SmartSearch } from "@/components/SmartSearch";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/dexie";
+import { cacheVehiclesLocally } from "@/lib/offlineSync";
+import { useEffect } from "react";
 
 interface Props {
   refuels: any[];
@@ -13,8 +17,17 @@ interface Props {
 export function HomeClient({ refuels, maintenance, vehicles }: Props) {
   const { t, lang } = useLanguage();
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.onLine) {
+      cacheVehiclesLocally(vehicles);
+    }
+  }, [vehicles]);
+
+  const cachedVehicles = useLiveQuery(() => db.vehicles.toArray());
+  const displayedVehicles = (cachedVehicles !== undefined && cachedVehicles.length > 0) ? (cachedVehicles as any[]) : vehicles;
+
   // 1. Active Ride selection (take first vehicle)
-  const activeVehicle = vehicles[0];
+  const activeVehicle = displayedVehicles[0];
 
   // 2. Current odometer calculation for active ride
   const maxRefuelOdo = activeVehicle?.refuelingLogs[0]?.odometer || 0;
@@ -51,9 +64,9 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
   }
 
   // 4. Global Smart Reminders (aggregate across all vehicles)
-  const allReminders = vehicles.flatMap(v => {
-    const vMaxRefuel = v.refuelingLogs[0]?.odometer || 0;
-    const vMaxMaint = v.maintenanceLogs[0]?.odometer || 0;
+  const allReminders = displayedVehicles.flatMap(v => {
+    const vMaxRefuel = v.refuelingLogs?.[0]?.odometer || 0;
+    const vMaxMaint = v.maintenanceLogs?.[0]?.odometer || 0;
     const vOdo = Math.max(vMaxRefuel, vMaxMaint, 0);
 
     return v.plannedMaintenances.map((r: any) => {

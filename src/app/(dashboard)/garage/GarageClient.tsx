@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
 import { AddVehicleForm } from "@/components/AddVehicleForm";
+import { useLiveQuery } from "dexie-react-hooks";
+import { db } from "@/lib/dexie";
+import { cacheVehiclesLocally } from "@/lib/offlineSync";
+import { useEffect } from "react";
 
 type Vehicle = {
   id: string;
@@ -18,6 +22,15 @@ type Vehicle = {
 export function GarageClient({ vehicles }: { vehicles: Vehicle[] }) {
   const { t } = useLanguage();
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.onLine) {
+      cacheVehiclesLocally(vehicles);
+    }
+  }, [vehicles]);
+
+  const cachedVehicles = useLiveQuery(() => db.vehicles.toArray());
+  const displayedVehicles = (cachedVehicles !== undefined && cachedVehicles.length > 0) ? (cachedVehicles as any[]) : vehicles;
+
   const handleShare = (slug: string) => {
     const url = `${window.location.origin}/public/${slug}`;
     navigator.clipboard.writeText(url);
@@ -31,7 +44,7 @@ export function GarageClient({ vehicles }: { vehicles: Vehicle[] }) {
         <AddVehicleForm />
       </div>
 
-      {vehicles.length === 0 ? (
+      {displayedVehicles.length === 0 ? (
         <div className="text-center py-24 bg-card rounded-3xl border-2 border-dashed border-border/50">
           <div className="text-7xl mb-6 grayscale opacity-20">🏍️</div>
           <p className="text-xl font-medium text-muted-foreground">{t("garage_empty")}</p>
@@ -39,7 +52,7 @@ export function GarageClient({ vehicles }: { vehicles: Vehicle[] }) {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2">
-          {vehicles.map((vehicle) => {
+          {displayedVehicles.map((vehicle) => {
             const lastOdo = vehicle.refuelingLogs[0]?.odometer ?? 0;
             return (
               <div key={vehicle.id} className="group relative block rounded-3xl border border-border bg-card overflow-hidden hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300">

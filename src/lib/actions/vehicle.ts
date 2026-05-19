@@ -38,6 +38,7 @@ export async function addVehicle(formData: FormData) {
   }
 
   revalidatePath("/garage");
+  return { success: true, vehicle };
 }
 
 export async function updateVehicleCharacteristics(vehicleId: string, formData: FormData) {

@@ -5,6 +5,8 @@ import { useLanguage } from "./LanguageProvider";
 import { getSyncQueue, clearSyncItem } from "@/lib/offlineSync";
 import { addRefuelLog } from "@/lib/actions/refuel";
 import { addMaintenanceLog } from "@/lib/actions/maintenance";
+import { addVehicle } from "@/lib/actions/vehicle";
+import { db } from "@/lib/dexie";
 
 export function OfflineSyncProvider({ children }: { children: React.ReactNode }) {
   const { lang } = useLanguage();
@@ -21,20 +23,50 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
 
       setSyncing(true);
       
+      const tempIdMap: Record<string, string> = {};
+
       for (const item of queue) {
         try {
           const formData = new FormData();
           Object.entries(item.payload).forEach(([k, v]) => {
-            formData.append(k, v);
+            if (k === "vehicleId" && tempIdMap[v]) {
+              formData.append(k, tempIdMap[v]);
+            } else {
+              formData.append(k, v);
+            }
           });
 
-          const vehicleId = item.payload.vehicleId;
-          if (!vehicleId) continue;
+          if (item.actionType === "ADD_VEHICLE") {
+            const res = await addVehicle(formData);
+            if (res && res.success && res.vehicle) {
+              const tempId = item.payload.tempId;
+              if (tempId) {
+                tempIdMap[tempId] = res.vehicle.id;
+                await db.vehicles.delete(tempId);
+                await db.vehicles.put({
+                  id: res.vehicle.id,
+                  make: res.vehicle.make,
+                  model: res.vehicle.model,
+                  year: Number(res.vehicle.year),
+                  engineDisplacement: res.vehicle.engineDisplacement,
+                  photoUrl: res.vehicle.photoUrl,
+                  brandName: res.vehicle.brandName,
+                  refuelingLogs: [],
+                  maintenanceLogs: [],
+                  plannedMaintenances: [],
+                  specs: null,
+                });
+              }
+            }
+          } else {
+            const vehicleId = formData.get("vehicleId")?.toString();
+            if (!vehicleId) continue;
 
-          if (item.actionType === "REFUEL") {
-            await addRefuelLog(vehicleId, formData);
-          } else if (item.actionType === "MAINTENANCE") {
-            await addMaintenanceLog(vehicleId, formData);
+            if (item.actionType === "REFUEL") {
+              await addRefuelLog(vehicleId, formData);
+            } else if (item.actionType === "MAINTENANCE") {
+              await addMaintenanceLog(vehicleId, formData);
+            }
           }
 
           await clearSyncItem(item.id);

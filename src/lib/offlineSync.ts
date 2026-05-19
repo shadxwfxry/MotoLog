@@ -1,47 +1,64 @@
-import { openDB } from "idb";
-
-const DB_NAME = "motolog_offline";
-const STORE_NAME = "sync_queue";
+import { db } from "./dexie";
 
 export interface SyncItem {
   id: number;
-  actionType: "REFUEL" | "MAINTENANCE";
+  actionType: "ADD_VEHICLE" | "REFUEL" | "MAINTENANCE";
   payload: Record<string, string>;
   createdAt: string;
 }
 
-export async function getDB() {
-  if (typeof window === "undefined") return null;
-  return openDB(DB_NAME, 1, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
-      }
-    },
-  });
-}
-
 export async function addToSyncQueue(
-  actionType: "REFUEL" | "MAINTENANCE",
+  actionType: "ADD_VEHICLE" | "REFUEL" | "MAINTENANCE",
   payload: Record<string, string>
 ) {
-  const db = await getDB();
-  if (!db) return;
-  await db.add(STORE_NAME, {
-    actionType,
+  if (typeof window === "undefined") return;
+  await db.syncQueue.add({
+    type: actionType,
     payload,
+    status: 'pending',
     createdAt: new Date().toISOString(),
   });
 }
 
 export async function getSyncQueue(): Promise<SyncItem[]> {
-  const db = await getDB();
-  if (!db) return [];
-  return db.getAll(STORE_NAME);
+  if (typeof window === "undefined") return [];
+  const items = await db.syncQueue.toArray();
+  return items.map((item) => ({
+    id: item.id!,
+    actionType: item.type as "ADD_VEHICLE" | "REFUEL" | "MAINTENANCE",
+    payload: item.payload,
+    createdAt: item.createdAt,
+  }));
 }
 
 export async function clearSyncItem(id: number) {
-  const db = await getDB();
-  if (!db) return;
-  await db.delete(STORE_NAME, id);
+  if (typeof window === "undefined") return;
+  await db.syncQueue.delete(id);
+}
+
+// ── Caching Vehicles & Logs Locally ──
+export async function cacheVehiclesLocally(vehicles: any[]) {
+  if (typeof window === "undefined") return;
+  // Clear old cache and update with latest hydrated objects
+  await db.vehicles.clear();
+  for (const v of vehicles) {
+    await db.vehicles.put({
+      id: v.id,
+      make: v.make,
+      model: v.model,
+      year: Number(v.year),
+      engineDisplacement: v.engineDisplacement,
+      photoUrl: v.photoUrl,
+      brandName: v.brandName,
+      refuelingLogs: v.refuelingLogs || [],
+      maintenanceLogs: v.maintenanceLogs || [],
+      plannedMaintenances: v.plannedMaintenances || [],
+      specs: v.specs || null,
+    });
+  }
+}
+
+export async function getCachedVehicles() {
+  if (typeof window === "undefined") return [];
+  return db.vehicles.toArray();
 }
