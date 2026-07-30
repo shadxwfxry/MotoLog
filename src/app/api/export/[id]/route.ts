@@ -1,60 +1,57 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getOptionalAuthUser } from "@/server/auth/guards";
+import { vehicleRepository } from "@/server/repositories/vehicleRepository";
 
-const sanitizeCSV = (str: string | number | null) => {
-  if (str === null || str === undefined) return "";
-  const stringified = String(str).replace(/"/g, '""');
-  // If starts with dangerous characters (=, +, -, @), prepend an apostrophe for safety against CSV Injection
+/**
+ * Escapes a CSV cell and defuses formula injection: a value starting with
+ * =, +, - or @ is executed as a formula when the file is opened in Excel or
+ * Sheets, so it is prefixed with an apostrophe.
+ */
+const sanitizeCSV = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined) return "";
+  const stringified = String(value).replace(/"/g, '""');
   return /^[=+\-@]/.test(stringified) ? `'${stringified}` : stringified;
 };
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+/** Strips characters that would break out of the Content-Disposition filename. */
+const sanitizeFilename = (value: string) => value.replace(/[^\w.-]+/g, "_");
 
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { id: params.id, userId: session.user.id },
-    include: {
-      refuelingLogs: { orderBy: { date: "asc" } },
-      maintenanceLogs: { orderBy: { date: "asc" }, include: { parts: true } }
-    }
-  });
+export async function GET(_req: Request, { params }: { params: { id: string } }) {
+  const user = await getOptionalAuthUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const vehicle = await vehicleRepository.findOwnedForExport(params.id, user.id);
   if (!vehicle) return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
 
-  let csv = "Date,Type,Odometer,Description,Cost\n";
-
-  // Combine and sort logs
   const logs = [
-    ...vehicle.refuelingLogs.map(l => ({
+    ...vehicle.refuelingLogs.map((l) => ({
       date: l.date,
       type: "Refuel",
-      odo: l.odometer,
-      desc: `${l.liters}L at ${l.stationName || "Unknown"}`,
-      cost: l.cost
+      odometer: l.odometer,
+      description: `${l.liters}L at ${l.stationName || "Unknown"}`,
+      cost: l.cost,
     })),
-    ...vehicle.maintenanceLogs.map(l => ({
+    ...vehicle.maintenanceLogs.map((l) => ({
       date: l.date,
       type: `Service: ${l.type}`,
-      odo: l.odometer,
-      desc: l.description || "",
-      cost: l.cost
-    }))
+      odometer: l.odometer,
+      description: l.description || "",
+      cost: l.cost,
+    })),
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  logs.forEach(l => {
-    csv += `"${l.date.toLocaleDateString()}","${sanitizeCSV(l.type)}","${l.odo}","${sanitizeCSV(l.desc)}","${l.cost}"\n`;
-  });
+  const rows = logs.map(
+    (l) =>
+      `"${l.date.toISOString().slice(0, 10)}","${sanitizeCSV(l.type)}","${l.odometer}","${sanitizeCSV(l.description)}","${l.cost}"`,
+  );
+
+  const csv = ["Date,Type,Odometer,Description,Cost", ...rows].join("\n");
+  const filename = sanitizeFilename(`motolog_${vehicle.make}_${vehicle.model}_export`);
 
   return new NextResponse(csv, {
     headers: {
-      "Content-Type": "text/csv",
-      "Content-Disposition": `attachment; filename="motolog_${vehicle.make}_${vehicle.model}_export.csv"`
-    }
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}.csv"`,
+    },
   });
 }

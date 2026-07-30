@@ -1,21 +1,29 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { useLanguage } from "@/components/LanguageProvider";
 import { SmartSearch } from "@/components/SmartSearch";
-import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/dexie";
 import { cacheVehiclesLocally } from "@/lib/offlineSync";
-import { useEffect } from "react";
+import {
+  URGENCY_HORIZON,
+  currentOdometerOf,
+  hasOverdue as anyOverdue,
+  scoreReminders,
+} from "@/features/maintenance/reminders";
+import { useActiveVehicleStore } from "@/store/activeVehicleStore";
+import type { HomeVehicle } from "./types";
 
 interface Props {
-  refuels: any[];
-  maintenance: any[];
-  vehicles: any[];
+  vehicles: HomeVehicle[];
 }
 
-export function HomeClient({ refuels, maintenance, vehicles }: Props) {
+export function HomeClient({ vehicles }: Props) {
   const { t, lang } = useLanguage();
+  const resolveActiveId = useActiveVehicleStore((s) => s.resolveActiveId);
+  const activeVehicleId = useActiveVehicleStore((s) => s.activeVehicleId);
 
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.onLine) {
@@ -24,24 +32,34 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
   }, [vehicles]);
 
   const cachedVehicles = useLiveQuery(() => db.vehicles.toArray());
-  const displayedVehicles = (cachedVehicles !== undefined && cachedVehicles.length > 0) ? (cachedVehicles as any[]) : vehicles;
+  const displayedVehicles: HomeVehicle[] =
+    cachedVehicles && cachedVehicles.length > 0
+      ? (cachedVehicles as unknown as HomeVehicle[])
+      : vehicles;
 
-  // 1. Active Ride selection (take first vehicle)
-  const activeVehicle = displayedVehicles[0];
+  // The user's chosen bike, falling back to the first one. Reading the store
+  // during render keeps this in sync after hydration without an extra effect.
+  const activeVehicle = useMemo(() => {
+    const activeId = activeVehicleId ?? resolveActiveId(displayedVehicles.map((v) => v.id));
+    return displayedVehicles.find((v) => v.id === activeId) ?? displayedVehicles[0];
+  }, [displayedVehicles, activeVehicleId, resolveActiveId]);
 
-  // 2. Current odometer calculation for active ride
-  const maxRefuelOdo = activeVehicle?.refuelingLogs[0]?.odometer || 0;
-  const maxMaintOdo = activeVehicle?.maintenanceLogs[0]?.odometer || 0;
-  const currentOdometer = Math.max(maxRefuelOdo, maxMaintOdo, 0);
+  const currentOdometer = activeVehicle ? currentOdometerOf(activeVehicle) : 0;
 
-  // 3. Reminder checks for active ride
-  const activeReminders = activeVehicle?.plannedMaintenances || [];
-  const overdueReminders = activeReminders.filter((r: any) => {
-    const odoOverdue = r.targetOdometer !== null && currentOdometer >= r.targetOdometer;
-    const dateOverdue = r.targetDate !== null && new Date() >= new Date(r.targetDate);
-    return odoOverdue || dateOverdue;
-  });
-  const hasOverdue = overdueReminders.length > 0;
+  const activeScored = useMemo(
+    () =>
+      activeVehicle
+        ? scoreReminders(
+            activeVehicle.plannedMaintenances ?? [],
+            currentOdometer,
+            URGENCY_HORIZON.overview,
+          )
+        : [],
+    [activeVehicle, currentOdometer],
+  );
+
+  const hasOverdue = anyOverdue(activeScored);
+  const activeReminders = activeScored;
 
   // Active status text & badges
   let statusBadge = (
@@ -63,42 +81,21 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
     );
   }
 
-  // 4. Global Smart Reminders (aggregate across all vehicles)
-  const allReminders = displayedVehicles.flatMap(v => {
-    const vMaxRefuel = v.refuelingLogs?.[0]?.odometer || 0;
-    const vMaxMaint = v.maintenanceLogs?.[0]?.odometer || 0;
-    const vOdo = Math.max(vMaxRefuel, vMaxMaint, 0);
-
-    return v.plannedMaintenances.map((r: any) => {
-      let isOverdue = false;
-      let isApproaching = false;
-
-      if (r.targetOdometer !== null) {
-        const diff = r.targetOdometer - vOdo;
-        if (diff <= 0) isOverdue = true;
-        else if (diff <= 1000) isApproaching = true;
-      }
-
-      if (r.targetDate !== null) {
-        const diffMs = new Date(r.targetDate).getTime() - new Date().getTime();
-        if (diffMs <= 0) isOverdue = true;
-        else if (diffMs <= 14 * 24 * 60 * 60 * 1000) isApproaching = true;
-      }
-
-      return {
-        ...r,
-        vehicleName: `${v.make} ${v.model}`,
-        vOdo,
-        isOverdue,
-        isApproaching,
-        priority: isOverdue ? 3 : isApproaching ? 2 : 1
-      };
-    });
-  });
-
-  const urgentReminders = [...allReminders]
-    .sort((a, b) => b.priority - a.priority)
-    .slice(0, 2);
+  // Most pressing reminders across the whole garage, not just the active bike.
+  const urgentReminders = useMemo(
+    () =>
+      displayedVehicles
+        .flatMap((v) =>
+          scoreReminders(
+            v.plannedMaintenances ?? [],
+            currentOdometerOf(v),
+            URGENCY_HORIZON.overview,
+          ).map((r) => ({ ...r, vehicleName: `${v.make} ${v.model}` })),
+        )
+        .sort((a, b) => b.rank - a.rank)
+        .slice(0, 2),
+    [displayedVehicles],
+  );
 
   return (
     <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6 pb-24">
@@ -116,7 +113,7 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
         </p>
       </div>
 
-      <SmartSearch refuels={refuels} maintenance={maintenance} />
+      <SmartSearch />
 
       {/* Widgets Grid */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -196,13 +193,13 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
 
             <div className="space-y-2 pt-2">
               {urgentReminders.length > 0 ? (
-                urgentReminders.map((r, i) => (
+                urgentReminders.map((r) => (
                   <div
-                    key={i}
+                    key={r.id}
                     className={`p-3 rounded-2xl border flex items-center justify-between transition ${
-                      r.isOverdue
+                      r.urgency === "overdue"
                         ? "bg-red-500/5 border-red-500/20"
-                        : r.isApproaching
+                        : r.urgency === "soon"
                         ? "bg-amber-500/5 border-amber-500/20"
                         : "bg-muted/40 border-border/60"
                     }`}
@@ -210,7 +207,7 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className={`w-2 h-2 rounded-full ${
-                          r.isOverdue ? "bg-red-500" : r.isApproaching ? "bg-amber-500" : "bg-muted-foreground"
+                          r.urgency === "overdue" ? "bg-red-500" : r.urgency === "soon" ? "bg-amber-500" : "bg-muted-foreground"
                         }`} />
                         <span className="text-xs font-extrabold text-foreground truncate block max-w-[150px]">
                           {r.type}
@@ -223,13 +220,13 @@ export function HomeClient({ refuels, maintenance, vehicles }: Props) {
 
                     <div className="text-right flex-shrink-0">
                       <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        r.isOverdue
+                        r.urgency === "overdue"
                           ? "bg-red-500/10 text-red-400"
-                          : r.isApproaching
+                          : r.urgency === "soon"
                           ? "bg-amber-500/10 text-amber-400"
                           : "bg-muted text-muted-foreground"
                       }`}>
-                        {r.isOverdue
+                        {r.urgency === "overdue"
                           ? (lang === "uk" ? "Терміново" : lang === "ru" ? "Срочно" : "Urgent")
                           : (lang === "uk" ? "Наближається" : lang === "ru" ? "Подходит" : "Soon")}
                       </span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { addVehicle } from "@/lib/actions/vehicle";
+import { addVehicle } from "@/features/garage/actions";
 import { useLanguage } from "./LanguageProvider";
 import { compressImage } from "@/lib/imageUtils";
 import { addToSyncQueue } from "@/lib/offlineSync";
@@ -54,6 +54,7 @@ export function AddVehicleForm() {
           engineDisplacement: payload.engineDisplacement ? Number(payload.engineDisplacement) : null,
           photoUrl: photoBase64 || null,
           brandName: payload.brandName || null,
+          slug: tempId,
           refuelingLogs: [],
           maintenanceLogs: [],
           plannedMaintenances: [],
@@ -61,23 +62,27 @@ export function AddVehicleForm() {
         });
         setIsOpen(false);
         setPhotoBase64("");
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not save offline");
       } finally {
         setLoading(false);
       }
       return;
     }
 
-    try {
-      await addVehicle(formData);
-      setIsOpen(false);
-      setPhotoBase64(""); // reset
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
+    const result = await addVehicle(formData);
+    setLoading(false);
+
+    // The old action returned `{ error }` for validation failures while this
+    // component only caught thrown errors, so an invalid form closed the dialog
+    // as though it had saved.
+    if (!result.ok) {
+      setError(result.error);
+      return;
     }
+
+    setIsOpen(false);
+    setPhotoBase64("");
   }
 
   return (

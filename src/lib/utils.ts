@@ -1,19 +1,10 @@
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
+/** Tailwind-aware className merge, used by the shadcn-style components. */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: Date | string | number | null | undefined) {
-  if (!date) return "";
-  try {
-    return new Intl.DateTimeFormat('en-GB', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric' 
-    }).format(new Date(date));
-  } catch (e) {
-    return "";
-  }
-}
+// formatDate moved to @/shared/lib/format, where it respects the user's locale
+// instead of hardcoding en-GB.

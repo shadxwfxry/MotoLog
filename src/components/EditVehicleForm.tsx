@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { updateVehicleCharacteristics } from "@/lib/actions/vehicle";
+import { updateVehicleCharacteristics } from "@/features/garage/actions";
 import { useLanguage } from "./LanguageProvider";
 import { compressImage } from "@/lib/imageUtils";
 
@@ -11,6 +11,7 @@ interface Props {
     engineDisplacement?: number | null;
     power?: number | null;
     weight?: number | null;
+    photoUrl?: string | null;
   };
 }
 
@@ -22,10 +23,7 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
   
   const isFullyConfigured = defaultValues.engineDisplacement && defaultValues.power && defaultValues.weight;
   const [isEditing, setIsEditing] = useState(!isFullyConfigured);
-  const [photoBase64, setPhotoBase64] = useState<string>(
-    // @ts-ignore
-    defaultValues.photoUrl || ""
-  );
+  const [photoBase64, setPhotoBase64] = useState<string>(defaultValues.photoUrl || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,18 +46,18 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
     }
 
     const result = await updateVehicleCharacteristics(vehicleId, formData);
-    
-    if (result?.error) {
+    setLoading(false);
+
+    if (!result.ok) {
       setError(result.error);
-      setLoading(false);
-    } else {
-      setSaved(true);
-      setLoading(false);
-      setTimeout(() => {
-        setSaved(false);
-        setIsEditing(false);
-      }, 1500);
+      return;
     }
+
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+      setIsEditing(false);
+    }, 1500);
   }
 
   if (!isEditing) {

@@ -1,9 +1,15 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { formatDate } from "@/lib/utils";
+import { getOptionalAuthUser } from "@/server/auth/guards";
+import { vehicleRepository } from "@/server/repositories/vehicleRepository";
+import { statsRepository } from "@/server/repositories/statsRepository";
+import { userRepository } from "@/server/repositories/userRepository";
+import {
+  maintenanceRepository,
+  refuelRepository,
+} from "@/server/repositories/logRepository";
+import { formatConsumption, formatCurrency, formatDate, formatDistance } from "@/shared/lib/format";
+import { serializeForClient } from "@/shared/lib/serialize";
 import { EditVehicleForm } from "@/components/EditVehicleForm";
 import { AddRefuelForm } from "@/components/AddRefuelForm";
 import { AddMaintenanceForm } from "@/components/AddMaintenanceForm";
@@ -17,56 +23,33 @@ import { SpecsSection } from "@/components/SpecsSection";
 
 export const dynamic = "force-dynamic";
 
+const LOG_PAGE_SIZE = 15;
+
 export default async function VehicleDetailPage({ params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  const user = await getOptionalAuthUser();
+  if (!user) redirect("/login");
 
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { 
-      id: params.id,
-      userId: session.user.id 
-    },
-    include: {
-      refuelingLogs: { orderBy: { date: "desc" }, take: 15 },
-      maintenanceLogs: { orderBy: { date: "desc" }, take: 15 },
-      plannedMaintenances: { orderBy: { isCompleted: "asc" } },
-    },
-  });
-
+  const vehicle = await vehicleRepository.findOwnedById(params.id, user.id);
   if (!vehicle) notFound();
 
-  const [maintStats, fuelStats, firstRefuel] = await Promise.all([
-    prisma.maintenanceLog.aggregate({
-      where: { vehicleId: vehicle.id },
-      _sum: { cost: true }
-    }),
-    prisma.refuelingLog.aggregate({
-      where: { vehicleId: vehicle.id },
-      _sum: { cost: true, liters: true },
-      _min: { odometer: true },
-      _max: { odometer: true },
-      _count: true
-    }),
-    prisma.refuelingLog.findFirst({
-      where: { vehicleId: vehicle.id },
-      orderBy: { odometer: "asc" },
-      select: { liters: true }
-    })
+  const [refuelPage, maintenancePage, stats, prefs] = await Promise.all([
+    refuelRepository.listByVehicle(vehicle.id, { limit: LOG_PAGE_SIZE }),
+    maintenanceRepository.listByVehicle(vehicle.id, { limit: LOG_PAGE_SIZE }),
+    // Consumption now comes from the same shared rule the dashboard uses, so
+    // the two pages can no longer disagree about the same bike.
+    statsRepository.getVehicleStats(vehicle.id),
+    userRepository.findFormatPrefs(user.id),
   ]);
 
-  const maintTotal = maintStats._sum.cost || 0;
-  const fuelTotal = fuelStats._sum.cost || 0;
+  const { maintenanceTotal, fuelTotal, consumption, currentOdometer } = stats;
 
-  let avgConsumption: number | null = null;
-  if (fuelStats._count >= 2) {
-    const totalKm = (fuelStats._max.odometer || 0) - (fuelStats._min.odometer || 0);
-    const totalLiters = (fuelStats._sum.liters || 0) - (firstRefuel?.liters || 0);
-    if (totalKm > 0) {
-      avgConsumption = (totalLiters / totalKm) * 100;
-    }
-  }
-
-  const currentOdometer = fuelStats._max.odometer || 0;
+  // Both log types render in one chronological feed.
+  const history = [
+    ...refuelPage.items.map((l) => ({ ...l, kind: "refuel" as const })),
+    ...maintenancePage.items.map((l) => ({ ...l, kind: "maintenance" as const })),
+  ]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, LOG_PAGE_SIZE);
 
   return (
     <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6">
@@ -90,32 +73,36 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
             <div className="space-y-3 pt-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Odometer</span>
-                <span className="font-bold">{currentOdometer.toLocaleString()} km</span>
+                <span className="font-bold">{formatDistance(currentOdometer, prefs)}</span>
               </div>
-              {avgConsumption !== null && (
+              {consumption.per100 !== null && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Consumption</span>
-                  <span className="font-bold text-primary">{avgConsumption.toFixed(1)} L/100km</span>
+                  <span className="font-bold text-primary">
+                    {formatConsumption(consumption.per100, prefs)}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Maintenance</span>
-                <span className="font-bold text-orange-400">{maintTotal.toLocaleString()} ₴</span>
+                <span className="font-bold text-orange-400">
+                  {formatCurrency(maintenanceTotal, prefs)}
+                </span>
               </div>
             </div>
 
             <div className="pt-4 border-t border-border space-y-2">
               <EditVehicleForm vehicleId={vehicle.id} defaultValues={vehicle} />
               <VehicleActions vehicleId={vehicle.id} />
-              
-              <ExportPdfButton 
-                vehicle={vehicle} 
-                refuels={vehicle.refuelingLogs} 
-                maintenance={vehicle.maintenanceLogs}
+
+              <ExportPdfButton
+                vehicle={vehicle}
+                refuels={serializeForClient(refuelPage.items)}
+                maintenance={serializeForClient(maintenancePage.items)}
                 stats={{
                   totalFuel: fuelTotal,
-                  totalMaint: maintTotal,
-                  avgCons: avgConsumption
+                  totalMaint: maintenanceTotal,
+                  avgCons: consumption.per100,
                 }}
               />
 
@@ -148,43 +135,62 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
             </div>
             <div className="p-0">
               <div className="divide-y divide-border">
-                {/* Combined logs - show latest 10 for UI performance */}
-                {[
-                  ...vehicle.refuelingLogs.map(l => ({ ...l, type_group: 'refuel' })),
-                  ...vehicle.maintenanceLogs.map(l => ({ ...l, type_group: 'maintenance' }))
-                ]
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .slice(0, 15)
-                .map(log => (
-                  <div key={log.id} className={`px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between hover:bg-muted/10 transition ${log.type_group === 'maintenance' ? 'border-l-4 border-l-orange-500/50' : ''}`}>
+                {/*
+                  One chronological feed. `kind` is a discriminated union, so
+                  each branch is narrowed properly — the previous version cast
+                  every field access to `any` to read type-specific columns.
+                */}
+                {history.map((log) => (
+                  <div
+                    key={log.id}
+                    className={`px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between hover:bg-muted/10 transition ${
+                      log.kind === "maintenance" ? "border-l-4 border-l-orange-500/50" : ""
+                    }`}
+                  >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{log.type_group === 'refuel' ? '⛽' : '🔧'}</span>
+                        <span className="text-lg">{log.kind === "refuel" ? "⛽" : "🔧"}</span>
                         <span className="font-medium text-sm">
-                          {log.type_group === 'refuel' ? ((log as any).stationName ?? "Fuel Station") : (log as any).type}
+                          {log.kind === "refuel" ? (log.stationName ?? "Fuel Station") : log.type}
                         </span>
-                        {log.type_group === 'refuel' && (log as any).fuelGrade && <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted uppercase">{(log as any).fuelGrade}</span>}
-                        {log.type_group === 'maintenance' && (
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded uppercase ${(log as any).category === 'repair' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                            {(log as any).category}
+                        {log.kind === "refuel" && log.fuelGrade && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted uppercase">
+                            {log.fuelGrade}
+                          </span>
+                        )}
+                        {log.kind === "maintenance" && (
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded uppercase ${
+                              log.category === "repair"
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-blue-500/20 text-blue-400"
+                            }`}
+                          >
+                            {log.category}
                           </span>
                         )}
                       </div>
-                      <p suppressHydrationWarning className="text-xs text-muted-foreground ml-7">{formatDate(log.date)} · {log.odometer.toLocaleString()} km</p>
+                      <p suppressHydrationWarning className="text-xs text-muted-foreground ml-7">
+                        {formatDate(log.date, prefs)} · {formatDistance(log.odometer, prefs)}
+                      </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <div className="text-right">
-                        <p className={`font-bold text-sm ${log.type_group === 'refuel' ? 'text-primary' : ''}`}>{log.cost} ₴</p>
-                        {log.type_group === 'refuel' && (
-                          <p className="text-[10px] text-muted-foreground">{(log as any).liters} L · {(log as any).pricePerLiter} ₴/L</p>
+                        <p className={`font-bold text-sm ${log.kind === "refuel" ? "text-primary" : ""}`}>
+                          {formatCurrency(log.cost, prefs)}
+                        </p>
+                        {log.kind === "refuel" && (
+                          <p className="text-[10px] text-muted-foreground">
+                            {log.liters} L · {log.pricePerLiter ?? "—"}
+                          </p>
                         )}
                       </div>
-                      <LogActions logId={log.id} type={log.type_group as any} isPublic={log.isPublic} />
+                      <LogActions logId={log.id} type={log.kind} isPublic={log.isPublic} />
                     </div>
                   </div>
                 ))}
 
-                {(vehicle.refuelingLogs.length === 0 && vehicle.maintenanceLogs.length === 0) && (
+                {history.length === 0 && (
                   <div className="px-6 py-12 text-center text-muted-foreground text-sm">
                     No history records yet.
                   </div>

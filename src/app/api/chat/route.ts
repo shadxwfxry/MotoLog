@@ -1,75 +1,47 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { getOptionalAuthUser } from "@/server/auth/guards";
+import { searchRepository } from "@/server/repositories/searchRepository";
+import { logger } from "@/shared/lib/logger";
+
+const AI_MODEL = "gemini-flash-latest";
+const CONTEXT_LOG_LIMIT = 15;
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await getOptionalAuthUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { query } = await req.json();
+  if (typeof query !== "string" || !query.trim()) {
+    return NextResponse.json({ error: "A query is required" }, { status: 400 });
+  }
 
-  const [recentRefuels, recentMaint] = await Promise.all([
-    prisma.refuelingLog.findMany({
-      where: {
-        vehicle: { userId: session.user.id }
-      },
-      orderBy: { date: "desc" },
-      take: 25,
-      include: { vehicle: { select: { make: true, model: true } } }
-    }),
-    prisma.maintenanceLog.findMany({
-      where: {
-        vehicle: { userId: session.user.id }
-      },
-      orderBy: { date: "desc" },
-      take: 25,
-      include: { vehicle: { select: { make: true, model: true } } }
-    })
-  ]);
+  const logs = await searchRepository.recentLogsForContext(user.id);
 
-  const localResults: any[] = [];
+  const context = logs.slice(0, CONTEXT_LOG_LIMIT).map((log) => ({
+    type: log.type,
+    vehicle: `${log.vehicle.make} ${log.vehicle.model}`,
+    date: log.date,
+    content: log.content,
+  }));
 
-  recentRefuels.forEach((log: any) => {
-    localResults.push({
-      type: "refuel",
-      vehicle: `${log.vehicle.make} ${log.vehicle.model}`,
-      date: log.date,
-      content: `Station: ${log.stationName || "Unknown"}, Cost: ${log.cost}, Liters: ${log.liters}, Odo: ${log.odometer}`,
-      raw: log
-    });
+  return NextResponse.json({
+    aiResponse: await generateAnswer(query, context),
+    localResults: context.slice(0, 5),
   });
+}
 
-  recentMaint.forEach((log: any) => {
-    localResults.push({
-      type: "maintenance",
-      vehicle: `${log.vehicle.make} ${log.vehicle.model}`,
-      date: log.date,
-      content: `${log.type}: ${log.description || "No description"}, Cost: ${log.cost}, Odo: ${log.odometer}`,
-      raw: log
-    });
-  });
-
-  // Sort by date descending
-  localResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  // 2. AI Logic using Google Generative AI
+async function generateAnswer(query: string, context: unknown[]): Promise<string> {
   const apiKey = process.env.AI_API_KEY;
-  let aiResponse = "";
+  if (!apiKey || apiKey.trim().length <= 10) {
+    return "AI_API_KEY is not configured. Add it to your environment variables.";
+  }
 
-  if (apiKey && apiKey.trim().length > 10) {
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-flash-latest",
-      });
-
-      const prompt = `You are MotoAssistant, an expert motorcycle AI mechanic.
+  const prompt = `You are MotoAssistant, an expert motorcycle AI mechanic.
 The user asked: "${query}"
 
 Here are their relevant logs from the database:
-${JSON.stringify(localResults.slice(0, 15))}
+${JSON.stringify(context)}
 
 INSTRUCTIONS:
 1. If the user is asking about their personal logs (like "when was my last oil change"), answer using the provided JSON logs.
@@ -77,26 +49,20 @@ INSTRUCTIONS:
 3. Be concise, friendly, and highly accurate.
 4. Respond in plain text format but you can use newlines for readability. Do NOT use markdown bold/italic/headers.`;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      aiResponse = response.text();
-    } catch (error: any) {
-      console.error("AI Error:", error);
-      if (error.message?.includes("429")) {
-        aiResponse = "Извините, лимит запросов к ИИ временно исчерпан (Google Quota). Пожалуйста, подождите минуту и попробуйте снова! 🏍️";
-      } else {
-        aiResponse = `Ошибка связи с ИИ: ${error.message}. Проверьте AI_API_KEY.`;
-      }
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: AI_MODEL });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    logger.error("AI assistant request failed", error);
+
+    // Rate limiting is worth telling the user about, since waiting fixes it.
+    // Any other provider message is withheld — it can carry key or quota detail.
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("429")) {
+      return "The AI quota is temporarily exhausted. Please wait a minute and try again. 🏍️";
     }
-  } else {
-    aiResponse = "AI_API_KEY не настроен. Пожалуйста, добавьте его в переменные окружения Vercel.";
+    return "The AI assistant is unavailable right now. Please try again shortly.";
   }
-
-  // Clean up 'raw' data before sending to client
-  const cleanResults = localResults.map(r => ({ ...r, raw: undefined }));
-
-  return NextResponse.json({
-    aiResponse,
-    localResults: cleanResults.slice(0, 5)
-  });
 }

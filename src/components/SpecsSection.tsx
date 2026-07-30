@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useLanguage } from "./LanguageProvider";
-import { updateVehicleSpecs } from "@/lib/actions/vehicle";
+import { updateVehicleSpecs } from "@/features/garage/actions";
 
 interface Props {
   vehicleId: string;
-  initialSpecs: any;
+  /** Free-form JSON column; validated into Record<string, string> below. */
+  initialSpecs: unknown;
 }
 
 export function SpecsSection({ vehicleId, initialSpecs }: Props) {
@@ -24,14 +25,18 @@ export function SpecsSection({ vehicleId, initialSpecs }: Props) {
 
     const updated = { ...specs, [newKey.trim()]: newValue.trim() };
     setSaving(true);
-    const res = await updateVehicleSpecs(vehicleId, updated);
+    const result = await updateVehicleSpecs(vehicleId, updated);
     setSaving(false);
 
-    if (res.success) {
-      setSpecs(updated);
-      setNewKey("");
-      setNewValue("");
+    if (!result.ok) {
+      // Previously a failed save was silent: the row simply never appeared.
+      alert(result.error);
+      return;
     }
+
+    setSpecs(updated);
+    setNewKey("");
+    setNewValue("");
   };
 
   const handleDelete = async (keyToDelete: string) => {
@@ -39,12 +44,15 @@ export function SpecsSection({ vehicleId, initialSpecs }: Props) {
     delete updated[keyToDelete];
 
     setSaving(true);
-    const res = await updateVehicleSpecs(vehicleId, updated);
+    const result = await updateVehicleSpecs(vehicleId, updated);
     setSaving(false);
 
-    if (res.success) {
-      setSpecs(updated);
+    if (!result.ok) {
+      alert(result.error);
+      return;
     }
+
+    setSpecs(updated);
   };
 
   return (

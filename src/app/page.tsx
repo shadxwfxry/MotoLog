@@ -1,60 +1,21 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { getOptionalAuthUser } from "@/server/auth/guards";
+import { vehicleRepository } from "@/server/repositories/vehicleRepository";
+import { serializeForClient } from "@/shared/lib/serialize";
 import { HomeClient } from "./HomeClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const session = await getServerSession(authOptions);
+  const user = await getOptionalAuthUser();
 
-  if (session) {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user!.email! },
-      include: {
-        vehicles: {
-          include: {
-            refuelingLogs: { orderBy: { odometer: "desc" }, take: 1 },
-            maintenanceLogs: { orderBy: { odometer: "desc" }, take: 1 },
-            plannedMaintenances: {
-              where: { isCompleted: false },
-              orderBy: [
-                { targetOdometer: "asc" },
-                { targetDate: "asc" }
-              ]
-            }
-          }
-        },
-        settings: true
-      },
-    });
+  if (user) {
+    // Vehicles, their latest odometer readings and open reminders. The page
+    // used to additionally load every refuel and maintenance row for every
+    // bike — thousands of rows to render a status badge and two reminders.
+    const vehicles = await vehicleRepository.listWithReminders(user.id);
 
-    const vehicleIds = user?.vehicles.map((v) => v.id) ?? [];
-
-    const [refuels, maintenance] = await Promise.all([
-      prisma.refuelingLog.findMany({
-        where: { vehicleId: { in: vehicleIds } },
-        orderBy: { date: "desc" },
-        include: { vehicle: true },
-      }),
-      prisma.maintenanceLog.findMany({
-        where: { vehicleId: { in: vehicleIds } },
-        orderBy: { date: "desc" },
-        include: { 
-          vehicle: true,
-          parts: true 
-        },
-      }),
-    ]);
-
-    return (
-      <HomeClient
-        refuels={JSON.parse(JSON.stringify(refuels))}
-        maintenance={JSON.parse(JSON.stringify(maintenance))}
-        vehicles={JSON.parse(JSON.stringify(user?.vehicles || []))}
-      />
-    );
+    return <HomeClient vehicles={serializeForClient(vehicles)} />;
   }
 
   // Not Authenticated: Show Landing Page

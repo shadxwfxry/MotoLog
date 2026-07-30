@@ -1,7 +1,7 @@
 "use client";
 
-import { deleteVehicle, clearVehicleStats } from "@/lib/actions/vehicle";
 import { useState } from "react";
+import { clearVehicleStats, deleteVehicle } from "@/features/garage/actions";
 
 export function VehicleActions({ vehicleId }: { vehicleId: string }) {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -10,10 +10,11 @@ export function VehicleActions({ vehicleId }: { vehicleId: string }) {
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this vehicle? This action cannot be undone.")) return;
     setIsDeleting(true);
-    try {
-      await deleteVehicle(vehicleId);
-    } catch (e) {
-      alert("Failed to delete vehicle");
+
+    // On success the action redirects, so control never returns here.
+    const result = await deleteVehicle(vehicleId);
+    if (!result.ok) {
+      alert(result.error);
       setIsDeleting(false);
     }
   };
@@ -21,13 +22,10 @@ export function VehicleActions({ vehicleId }: { vehicleId: string }) {
   const handleClearStats = async () => {
     if (!confirm("Are you sure you want to clear all history for this vehicle?")) return;
     setIsCleaning(true);
-    try {
-      await clearVehicleStats(vehicleId);
-    } catch (e) {
-      alert("Failed to clear stats");
-    } finally {
-      setIsCleaning(false);
-    }
+
+    const result = await clearVehicleStats(vehicleId);
+    if (!result.ok) alert(result.error);
+    setIsCleaning(false);
   };
 
   return (

@@ -1,8 +1,8 @@
 "use client";
 
-import { deleteRefuelLog, toggleRefuelPublic } from "@/lib/actions/refuel";
-import { deleteMaintenanceLog, toggleMaintenancePublic } from "@/lib/actions/maintenance";
 import { useState } from "react";
+import { deleteRefuelLog, toggleRefuelPublic } from "@/features/fuel/actions";
+import { deleteMaintenanceLog, toggleMaintenancePublic } from "@/features/maintenance/actions";
 
 interface Props {
   logId: string;
@@ -16,25 +16,24 @@ export function LogActions({ logId, type, isPublic }: Props) {
   const handleDelete = async () => {
     if (!confirm("Delete this entry?")) return;
     setLoading(true);
-    try {
-      if (type === "refuel") await deleteRefuelLog(logId);
-      else await deleteMaintenanceLog(logId);
-    } catch (e) {
-      alert("Error deleting");
-      setLoading(false);
-    }
+
+    const result =
+      type === "refuel" ? await deleteRefuelLog(logId) : await deleteMaintenanceLog(logId);
+
+    if (!result.ok) alert(result.error);
+    setLoading(false);
   };
 
   const handleTogglePublic = async () => {
     setLoading(true);
-    try {
-      if (type === "refuel") await toggleRefuelPublic(logId, !isPublic);
-      else await toggleMaintenancePublic(logId, !isPublic);
-    } catch (e) {
-      alert("Error updating visibility");
-    } finally {
-      setLoading(false);
-    }
+
+    const result =
+      type === "refuel"
+        ? await toggleRefuelPublic(logId, !isPublic)
+        : await toggleMaintenancePublic(logId, !isPublic);
+
+    if (!result.ok) alert(result.error);
+    setLoading(false);
   };
 
   return (

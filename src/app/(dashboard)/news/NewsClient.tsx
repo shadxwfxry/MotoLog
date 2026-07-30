@@ -1,7 +1,7 @@
 "use client";
 
 import { useLanguage } from "@/components/LanguageProvider";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "@/shared/lib/format";
 import type { MotoNews } from "@/types";
 
 interface Props {

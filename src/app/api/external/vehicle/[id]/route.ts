@@ -1,50 +1,32 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { vehicleRepository } from "@/server/repositories/vehicleRepository";
+import { logger } from "@/shared/lib/logger";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+/**
+ * Public vehicle card for tournament QR scanning. CORS is open by design, and
+ * the repository selects only presentational fields — no logs, no owner email.
+ */
+const CORS_HEADERS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+};
+
+export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {
-    const vehicle = await prisma.vehicle.findUnique({
-      where: { id: params.id },
-      select: {
-        brandName: true,
-        model: true,
-        photoUrl: true,
-        user: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
+    const vehicle = await vehicleRepository.findPublicCard(params.id);
 
     if (!vehicle) {
-      return new NextResponse(JSON.stringify({ error: "Vehicle not found" }), {
-        status: 404,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-        },
-      });
+      return NextResponse.json({ error: "Vehicle not found" }, { status: 404, headers: CORS_HEADERS });
     }
 
-    return new NextResponse(JSON.stringify(vehicle), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
-  } catch (error: any) {
-    return new NextResponse(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+    return NextResponse.json(vehicle, { status: 200, headers: CORS_HEADERS });
+  } catch (error) {
+    logger.error("external vehicle lookup failed", error);
+    // Internal error text must not cross the CORS boundary.
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500, headers: CORS_HEADERS },
+    );
   }
 }
 

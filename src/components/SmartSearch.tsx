@@ -1,15 +1,10 @@
 "use client";
 
 import { useLanguage } from "@/components/LanguageProvider";
-import { useSmartSearch } from "@/hooks/useSmartSearch";
-import { formatDate } from "@/lib/utils";
+import { useSmartSearch } from "@/features/search/useSmartSearch";
+import { formatDate } from "@/shared/lib/format";
 
-interface SmartSearchProps {
-  refuels: any[];
-  maintenance: any[];
-}
-
-export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
+export function SmartSearch() {
   const { t } = useLanguage();
   const {
     query,
@@ -20,7 +15,7 @@ export function SmartSearch({ refuels, maintenance }: SmartSearchProps) {
     localResults,
     handleAiSearch,
     resetSearch,
-  } = useSmartSearch({ refuels, maintenance });
+  } = useSmartSearch();
 
   const hasContent = query.trim().length > 0 || !!aiResult || !!aiError;
 

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   calcConsumption,
+  calcConsumptionFromAggregates,
   calcFleetConsumption,
   calcFuelTotals,
   groupByStation,
+  type FuelAggregate,
   type RefuelSample,
 } from "./consumption";
 
@@ -86,6 +88,49 @@ describe("calcFleetConsumption", () => {
 
   it("returns null when nothing is measurable", () => {
     expect(calcFleetConsumption([[refuel(10_000, 20)], []]).per100).toBeNull();
+  });
+});
+
+describe("calcConsumptionFromAggregates", () => {
+  /** What Postgres GROUP BY returns for a set of rows. */
+  const aggregateOf = (refuels: RefuelSample[]): FuelAggregate => {
+    const sorted = [...refuels].sort((a, b) => a.odometer - b.odometer);
+    return {
+      logCount: sorted.length,
+      minOdometer: sorted[0]?.odometer ?? 0,
+      maxOdometer: sorted[sorted.length - 1]?.odometer ?? 0,
+      totalLiters: sorted.reduce((s, r) => s + r.liters, 0),
+      firstLiters: sorted[0]?.liters ?? 0,
+    };
+  };
+
+  // The SQL path and the row path are two implementations of one rule; if they
+  // ever disagree the dashboard and the vehicle page show different numbers for
+  // the same bike, which is exactly the bug this refactor removes.
+  const cases: Record<string, RefuelSample[]> = {
+    "a normal history": [refuel(10_000, 20), refuel(10_500, 30), refuel(11_000, 30)],
+    "a zero-litre seed row": [refuel(10_000, 0), refuel(10_400, 20)],
+    "a single refuel": [refuel(10_000, 20)],
+    "no refuels": [],
+    "a stationary odometer": [refuel(10_000, 20), refuel(10_000, 15)],
+    "only the first tank filled": [refuel(10_000, 20), refuel(10_500, 0)],
+  };
+
+  for (const [name, refuels] of Object.entries(cases)) {
+    it(`agrees with calcConsumption for ${name}`, () => {
+      expect(calcConsumptionFromAggregates([aggregateOf(refuels)])).toEqual(
+        calcConsumption(refuels),
+      );
+    });
+  }
+
+  it("agrees with calcFleetConsumption across vehicles", () => {
+    const thirsty = [refuel(0, 0), refuel(1000, 100)];
+    const frugal = [refuel(0, 0), refuel(100, 2)];
+
+    expect(calcConsumptionFromAggregates([aggregateOf(thirsty), aggregateOf(frugal)])).toEqual(
+      calcFleetConsumption([thirsty, frugal]),
+    );
   });
 });
 

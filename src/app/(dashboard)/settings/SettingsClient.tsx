@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useVisualTheme } from "@/components/VisualThemeProvider";
-import { updateUserSettings } from "@/lib/actions/vehicle";
+import { updateUserSettings } from "@/features/garage/actions";
+import type { UserSettings } from "@prisma/client";
 
 const THEMES = [
   { id: "theme-orange", color: "#f97316", label: "Orange" },
@@ -14,7 +15,7 @@ const THEMES = [
   { id: "theme-yellow", color: "#eab308", label: "Yellow" },
 ];
 
-export function SettingsClient({ settings }: { settings: any }) {
+export function SettingsClient({ settings }: { settings: UserSettings | null }) {
   const { t, lang } = useLanguage();
   const { theme, setTheme, accentColor, setAccentColor } = useVisualTheme();
   
@@ -25,16 +26,20 @@ export function SettingsClient({ settings }: { settings: any }) {
 
   const handleSave = async () => {
     setSaving(true);
-    try {
-      await updateUserSettings(localTheme, localAccent, newsPrefs);
-      setTheme(localTheme);
-      setAccentColor(localAccent);
-      alert(t("settings_saved") || "Settings saved!");
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSaving(false);
+
+    const result = await updateUserSettings(localTheme, localAccent, newsPrefs);
+    setSaving(false);
+
+    if (!result.ok) {
+      // Previously the failure was only written to the console, so the user
+      // saw nothing at all and assumed the settings had saved.
+      alert(result.error);
+      return;
     }
+
+    setTheme(localTheme);
+    setAccentColor(localAccent);
+    alert(t("settings_saved") || "Settings saved!");
   };
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { addMaintenanceLog } from "@/lib/actions/maintenance";
+import { addMaintenanceLog } from "@/features/maintenance/actions";
 import { useLanguage } from "./LanguageProvider";
 import { addToSyncQueue } from "@/lib/offlineSync";
 
@@ -15,6 +15,7 @@ export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
   const { t, lang } = useLanguage();
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [offlineSaved, setOfflineSaved] = useState(false);
   const [category, setCategory] = useState("service");
   const [customType, setCustomType] = useState("");
@@ -46,7 +47,13 @@ export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
       return;
     }
 
-    await addMaintenanceLog(vehicleId, formData);
+    const result = await addMaintenanceLog(vehicleId, formData);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
+    setError(null);
     setAdded(true);
     setOpen(false);
     setCustomType(""); setSelectedPreset(""); setOdo("");
@@ -77,6 +84,12 @@ export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
           <h4 className="text-sm font-black uppercase tracking-wider text-muted-foreground">
             🔧 {t("add_service")}
           </h4>
+
+          {error && (
+            <p className="text-xs font-semibold text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2">
+              {error}
+            </p>
+          )}
 
           {/* Category tabs */}
           <div className="flex rounded-xl overflow-hidden border border-border">

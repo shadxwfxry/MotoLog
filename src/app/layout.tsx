@@ -4,9 +4,8 @@ import { Inter, Bebas_Neue, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Navigation } from "@/components/Navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getOptionalAuthUser } from "@/server/auth/guards";
+import { userRepository } from "@/server/repositories/userRepository";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 const bebasNeue = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-bebas" });
@@ -39,19 +38,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getServerSession(authOptions);
-  
+  const user = await getOptionalAuthUser();
+
   let theme = "dark";
   let accent = "theme-orange";
 
-  if (session?.user?.email) {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: { settings: true }
-    });
-    if (user?.settings) {
-      theme = user.settings.theme;
-      accent = user.settings.accentColor;
+  if (user) {
+    const settings = await userRepository.findSettings(user.id);
+    if (settings) {
+      theme = settings.theme;
+      accent = settings.accentColor;
     }
   }
 

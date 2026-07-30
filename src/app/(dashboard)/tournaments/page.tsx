@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getOptionalAuthUser } from "@/server/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -9,8 +8,8 @@ interface PageProps {
 }
 
 export default async function TournamentsPage({ searchParams }: PageProps) {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  const user = await getOptionalAuthUser();
+  if (!user) redirect("/login");
 
   const resolvedParams = await searchParams;
   const isAdminMode = resolvedParams?.mode === "admin";

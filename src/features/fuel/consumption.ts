@@ -75,6 +75,43 @@ export function calcFleetConsumption(
   return { distance, liters, per100: (liters / distance) * 100 };
 }
 
+/**
+ * The same rule as `calcConsumption`, expressed over SQL aggregates.
+ *
+ * The dashboard cannot ship every row to the client just to divide two numbers,
+ * so Postgres does the summing and this reassembles the result. It must stay
+ * in lockstep with `calcConsumption` — the tests assert both agree on the same
+ * data.
+ */
+export interface FuelAggregate {
+  /** Number of refuels; fewer than two makes consumption unmeasurable. */
+  logCount: number;
+  minOdometer: number;
+  maxOdometer: number;
+  totalLiters: number;
+  /** Litres in the earliest tank, excluded for the same reason as above. */
+  firstLiters: number;
+}
+
+export function calcConsumptionFromAggregates(
+  aggregates: readonly FuelAggregate[],
+): Consumption {
+  let distance = 0;
+  let liters = 0;
+
+  for (const a of aggregates) {
+    if (a.logCount < 2) continue;
+    const vehicleDistance = a.maxOdometer - a.minOdometer;
+    const vehicleLiters = a.totalLiters - a.firstLiters;
+    if (vehicleDistance <= 0 || vehicleLiters <= 0) continue;
+    distance += vehicleDistance;
+    liters += vehicleLiters;
+  }
+
+  if (distance <= 0 || liters <= 0) return EMPTY;
+  return { distance, liters, per100: (liters / distance) * 100 };
+}
+
 export interface FuelTotals {
   totalCost: number;
   totalLiters: number;

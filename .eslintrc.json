@@ -1,0 +1,42 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "@prisma/client",
+            "importNames": ["PrismaClient"],
+            "message": "Instantiate Prisma only in src/server/db.ts. Types from @prisma/client are fine."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/server/db.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["src/**/*.{ts,tsx}"],
+      "excludedFiles": ["src/server/db.ts", "src/server/repositories/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/server/db", "**/server/db"],
+                "message": "Do not query Prisma directly — add or reuse a method in src/server/repositories/."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

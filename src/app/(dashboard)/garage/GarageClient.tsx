@@ -1,25 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { useLanguage } from "@/components/LanguageProvider";
 import { AddVehicleForm } from "@/components/AddVehicleForm";
-import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/dexie";
 import { cacheVehiclesLocally } from "@/lib/offlineSync";
-import { useEffect } from "react";
+import { currentOdometerOf } from "@/features/maintenance/reminders";
+import type { GarageVehicle } from "@/app/types";
 
-type Vehicle = {
-  id: string;
-  make: string;
-  model: string;
-  year: number;
-  engineDisplacement: number | null;
-  photoUrl: string | null;
-  brandName: string | null;
-  refuelingLogs: { odometer: number }[];
-};
-
-export function GarageClient({ vehicles }: { vehicles: Vehicle[] }) {
+export function GarageClient({ vehicles }: { vehicles: GarageVehicle[] }) {
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -29,11 +20,14 @@ export function GarageClient({ vehicles }: { vehicles: Vehicle[] }) {
   }, [vehicles]);
 
   const cachedVehicles = useLiveQuery(() => db.vehicles.toArray());
-  const displayedVehicles = (cachedVehicles !== undefined && cachedVehicles.length > 0) ? (cachedVehicles as any[]) : vehicles;
+  const displayedVehicles: GarageVehicle[] =
+    cachedVehicles && cachedVehicles.length > 0
+      ? (cachedVehicles as unknown as GarageVehicle[])
+      : vehicles;
 
-  const handleShare = (slug: string) => {
+  const handleShare = async (slug: string) => {
     const url = `${window.location.origin}/public/${slug}`;
-    navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(url);
     alert(t("link_copied") || "Link copied to clipboard!");
   };
 
@@ -53,7 +47,7 @@ export function GarageClient({ vehicles }: { vehicles: Vehicle[] }) {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2">
           {displayedVehicles.map((vehicle) => {
-            const lastOdo = vehicle.refuelingLogs[0]?.odometer ?? 0;
+            const lastOdo = currentOdometerOf(vehicle);
             return (
               <div key={vehicle.id} className="group relative block rounded-3xl border border-border bg-card overflow-hidden hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300">
                 <Link href={`/garage/${vehicle.id}`} className="block">
@@ -84,9 +78,9 @@ export function GarageClient({ vehicles }: { vehicles: Vehicle[] }) {
                       <button 
                         onClick={(e) => {
                           e.preventDefault();
-                          // In a real app we'd need the slug here. 
-                          // Let's assume we can share by ID or add slug to types.
-                          handleShare(vehicle.id); 
+                          // /public/[slug] looks the vehicle up by slug; passing
+                          // the id here produced a 404 on every shared link.
+                          void handleShare(vehicle.slug);
                         }}
                         className="p-2 rounded-xl bg-muted hover:bg-primary/10 hover:text-primary transition-colors"
                         title={t("share") || "Share"}

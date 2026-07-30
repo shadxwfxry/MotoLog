@@ -1,19 +1,13 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { getOptionalAuthUser } from "@/server/auth/guards";
+import { userRepository } from "@/server/repositories/userRepository";
 import { SettingsClient } from "./SettingsClient";
 
 export default async function SettingsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  const user = await getOptionalAuthUser();
+  if (!user) redirect("/login");
 
-  // @ts-ignore - prisma.userSettings might be missing in IDE but present in runtime
-  const userSettings = (prisma as any).userSettings;
-  
-  const settings = userSettings 
-    ? await userSettings.findUnique({ where: { userId: session.user.id } })
-    : null;
+  const settings = await userRepository.findSettings(user.id);
 
   return <SettingsClient settings={settings} />;
 }

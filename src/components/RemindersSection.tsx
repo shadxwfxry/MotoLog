@@ -1,9 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { addPlannedMaintenance, completePlannedMaintenance, deletePlannedMaintenance } from "@/lib/actions/maintenance";
+import {
+  addPlannedMaintenance,
+  completePlannedMaintenance,
+  deletePlannedMaintenance,
+} from "@/features/maintenance/actions";
+import { URGENCY_HORIZON, calcUrgency, type Urgency } from "@/features/maintenance/reminders";
 import { useLanguage } from "./LanguageProvider";
-import { formatDate } from "@/lib/utils";
+import { formatDate } from "@/shared/lib/format";
 
 type Reminder = {
   id: string;
@@ -30,6 +35,7 @@ export function RemindersSection({
   const { t } = useLanguage();
   const [reminders, setReminders] = useState(initial);
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState("consumable");
   const [customType, setCustomType] = useState("");
   const [selectedPreset, setSelectedPreset] = useState("");
@@ -37,40 +43,45 @@ export function RemindersSection({
   async function handleAdd(formData: FormData) {
     formData.set("category", category);
     formData.set("type", customType || selectedPreset || "Reminder");
-    await addPlannedMaintenance(vehicleId, formData);
+
+    const result = await addPlannedMaintenance(vehicleId, formData);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+
+    setError(null);
     setOpen(false);
     setCustomType(""); setSelectedPreset("");
   }
 
   async function handleComplete(id: string) {
-    await completePlannedMaintenance(id);
+    const result = await completePlannedMaintenance(id);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
     setReminders(r => r.map(x => x.id === id ? { ...x, isCompleted: true } : x));
   }
 
   async function handleDelete(id: string) {
-    await deletePlannedMaintenance(id);
+    const result = await deletePlannedMaintenance(id);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
     setReminders(r => r.filter(x => x.id !== id));
   }
 
   const active = reminders.filter(r => !r.isCompleted);
   const done = reminders.filter(r => r.isCompleted);
 
-  function urgency(r: Reminder): "urgent" | "soon" | "ok" {
-    if (r.targetOdometer) {
-      const diff = r.targetOdometer - currentOdometer;
-      if (diff <= 0) return "urgent";
-      if (diff <= 500) return "soon";
-    }
-    if (r.targetDate) {
-      const diff = (new Date(r.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-      if (diff <= 0) return "urgent";
-      if (diff <= 7) return "soon";
-    }
-    return "ok";
-  }
+  // Shared with the home screen; this page uses the near-term horizon.
+  const urgency = (r: Reminder): Urgency =>
+    calcUrgency(r, currentOdometer, URGENCY_HORIZON.detail);
 
-  const urgencyStyle: Record<string, string> = {
-    urgent: "border-red-500 bg-red-500/10 text-red-400",
+  const urgencyStyle: Record<Urgency, string> = {
+    overdue: "border-red-500 bg-red-500/10 text-red-400",
     soon: "border-yellow-500 bg-yellow-500/10 text-yellow-400",
     ok: "border-border bg-muted/20",
   };
@@ -94,6 +105,12 @@ export function RemindersSection({
           + {t("add_reminder")}
         </button>
       </div>
+
+      {error && (
+        <p className="text-xs font-semibold text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2">
+          {error}
+        </p>
+      )}
 
       {/* Active reminders */}
       {active.length > 0 && (
