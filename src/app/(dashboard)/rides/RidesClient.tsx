@@ -38,7 +38,15 @@ export function RidesClient({ vehicles, trips, prefs }: Props) {
 
   return (
     <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6 pb-24">
-      <h1 className="text-2xl font-bold tracking-tight uppercase">Rides</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold tracking-tight uppercase">Rides</h1>
+        <Link
+          href="/rides/group"
+          className="px-4 py-2 rounded-xl bg-muted border border-border text-xs font-black uppercase tracking-wider hover:border-primary hover:text-primary transition"
+        >
+          🛰 Group
+        </Link>
+      </div>
 
       <div className="flex rounded-xl overflow-hidden border border-border">
         {(["record", "history"] as const).map((value) => (
