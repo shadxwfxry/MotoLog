@@ -9,14 +9,19 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  name      String?
-  email     String    @unique
-  password  String
-  currency  String    @default("₴")
-  unitSystem String   @default("metric") // "metric" (km/L) | "imperial" (mi/gal)
-  vehicles  Vehicle[]
-  settings  UserSettings?
+  id         String    @id @default(cuid())
+  name       String?
+  email      String    @unique
+  password   String
+  currency   String    @default("₴")
+  unitSystem String    @default("metric") // "metric" (km/L) | "imperial" (mi/gal)
+  vehicles   Vehicle[]
+  settings   UserSettings?
+  trips      Trip[]
+  ownedRides RideGroup[]        @relation("RideGroupOwner")
+  rideMemberships RideGroupMember[]
+  friendsInitiated Friendship[] @relation("FriendshipRequester")
+  friendsReceived  Friendship[] @relation("FriendshipAddressee")
 }
 
 model UserSettings {
@@ -47,6 +52,10 @@ model Vehicle {
   refuelingLogs       RefuelingLog[]
   maintenanceLogs     MaintenanceLog[]
   plannedMaintenances PlannedMaintenance[]
+  trips               Trip[]
+
+  // Every garage query filters by owner.
+  @@index([userId])
 }
 
 model RefuelingLog {
@@ -62,6 +71,10 @@ model RefuelingLog {
   fuelGrade    String?
   notes        String?
   isPublic     Boolean  @default(true)
+
+  // Log lists page on (date, id); consumption scans on odometer.
+  @@index([vehicleId, date])
+  @@index([vehicleId, odometer])
 }
 
 model MaintenanceLog {
@@ -76,6 +89,9 @@ model MaintenanceLog {
   description String?
   parts       Part[]
   isPublic    Boolean             @default(true)
+
+  @@index([vehicleId, date])
+  @@index([vehicleId, odometer])
 }
 
 model Part {
@@ -84,6 +100,8 @@ model Part {
   maintenanceLog   MaintenanceLog @relation(fields: [maintenanceLogId], references: [id], onDelete: Cascade)
   name             String
   price            Float?
+
+  @@index([maintenanceLogId])
 }
 
 model PlannedMaintenance {
@@ -97,4 +115,93 @@ model PlannedMaintenance {
   intervalKm     Int?      // repeat every N km
   isCompleted    Boolean   @default(false)
   description    String?
+
+  // Open reminders are read on every home render.
+  @@index([vehicleId, isCompleted])
+}
+
+// ─── Trips (GPS tracking) ────────────────────────────────────────────────────
+
+/// A recorded ride.
+///
+/// The GPS track is stored as an encoded polyline plus parallel sample arrays
+/// rather than a row per point: a two-hour ride at 1 Hz is ~7000 points, which
+/// as rows would dwarf the rest of the database and make the trip list a join
+/// over millions of rows. The trade-off is that individual points are not
+/// SQL-queryable — nothing in the product needs that, and the whole track fits
+/// in one IndexedDB record for offline use.
+model Trip {
+  id             String    @id @default(cuid())
+  vehicleId      String
+  vehicle        Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String?
+  startedAt      DateTime
+  endedAt        DateTime?
+  /// Metres, accumulated from filtered GPS fixes.
+  distanceM      Int       @default(0)
+  /// Seconds of elapsed ride time.
+  durationS      Int       @default(0)
+  avgSpeedKph    Float?
+  maxSpeedKph    Float?
+  /// Null when the device exposed no orientation sensor.
+  maxLeanAngleDeg Float?
+  /// Google-encoded polyline of the route.
+  trackEncoded   String?
+  /// { t: number[]; speed: number[]; lean?: (number|null)[] }, aligned with the polyline.
+  samples        Json?
+  status         String    @default("completed") // "recording" | "completed"
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, startedAt])
+  @@index([vehicleId, startedAt])
+}
+
+// ─── Group rides (multiplayer) ───────────────────────────────────────────────
+
+/// A live group ride. Positions and chat travel over the realtime transport and
+/// are never persisted; only membership and the ride window live here.
+model RideGroup {
+  id        String            @id @default(cuid())
+  /// Short human-typeable code used to join.
+  code      String            @unique
+  name      String
+  ownerId   String
+  owner     User              @relation("RideGroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  startedAt DateTime          @default(now())
+  endedAt   DateTime?
+  isActive  Boolean           @default(true)
+  members   RideGroupMember[]
+
+  @@index([ownerId])
+  @@index([isActive, startedAt])
+}
+
+model RideGroupMember {
+  id       String    @id @default(cuid())
+  groupId  String
+  group    RideGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname String
+  joinedAt DateTime  @default(now())
+  leftAt   DateTime?
+
+  @@unique([groupId, userId])
+  @@index([userId])
+}
+
+/// Friend graph, backing the "Friends" tab of the leaderboard.
+model Friendship {
+  id          String   @id @default(cuid())
+  requesterId String
+  requester   User     @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   User     @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      String   @default("pending") // "pending" | "accepted" | "blocked"
+  createdAt   DateTime @default(now())
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
 }
