@@ -66,7 +66,7 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
         onClick={() => setIsEditing(true)}
         className="w-full text-center text-xs text-muted-foreground hover:text-primary py-3 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-all font-medium"
       >
-        ⚙️ {t("edit_characteristics") || "Edit Specs & Photo"}
+        ⚙️ {t("edit_specs_photo")}
       </button>
     );
   }
