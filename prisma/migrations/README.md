@@ -1,10 +1,14 @@
 # Migrations
 
-The project previously used `prisma db push`, so there is no migration history in
-the database. These files were generated with `prisma migrate diff` and are
-**not applied yet** — the database was unreachable at the time they were written
-(`FATAL: (ENOTFOUND) tenant/user postgres.… not found`, i.e. a paused Supabase
-project or rotated credentials).
+The project previously used `prisma db push`, so there was no migration history
+in the database. `0_init` adopts the pre-refactor schema as a baseline and
+`20260731000000_indexes_trips_and_group_rides` adds everything this refactor
+needs.
+
+**Both have been applied to the development database** (31 Jul 2026): 4 tables
+and 13 indexes created, with the existing 6 users / 6 vehicles / 12 refuels /
+6 service logs untouched. The steps below are the record of how, and what to
+run against any other environment.
 
 ## What the pending migration does
 
@@ -29,10 +33,16 @@ npx prisma db pull --print          # smoke-test the connection
 
 # 2. Adopt the existing schema as the migration baseline. Without this,
 #    `migrate deploy` would try to create tables that already exist.
+#
+#    The baseline must describe what is ALREADY in the database — the schema as
+#    it was before this refactor — not the current schema.prisma. Generating it
+#    from the current file would record Trip and the group-ride tables as
+#    already present and leave the history permanently out of step with reality.
+git show c638355~1:prisma/schema.prisma > /tmp/baseline.prisma
 mkdir -p prisma/migrations/0_init
 npx prisma migrate diff \
   --from-empty \
-  --to-schema-datamodel prisma/schema.prisma \
+  --to-schema-datamodel /tmp/baseline.prisma \
   --script > prisma/migrations/0_init/migration.sql
 npx prisma migrate resolve --applied 0_init
 
