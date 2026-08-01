@@ -20,6 +20,7 @@ import { LogActions } from "@/components/LogActions";
 import { ExportPdfButton } from "@/components/ExportPdfButton";
 import { QrCodeButton } from "@/components/QrCodeButton";
 import { SpecsSection } from "@/components/SpecsSection";
+import { T } from "@/components/T";
 import { Badge, EmptyState, Panel, PanelTitle, PageShell, StatTile } from "@/shared/ui";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary"
         >
           <ChevronLeft size={14} strokeWidth={2.8} />
-          Garage
+          <T k="garage" />
         </Link>
 
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -83,17 +84,17 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
       {/* ── Headline readouts ── */}
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         <StatTile
-          label="Odometer"
+          label={<T k="odometer" />}
           value={formatDistance(currentOdometer, prefs)}
           tone="primary"
         />
         <StatTile
-          label="Consumption"
+          label={<T k="consumption" />}
           value={consumption.per100 !== null ? formatConsumption(consumption.per100, prefs) : "—"}
           tone="lime"
         />
         <StatTile
-          label="Maintenance"
+          label={<T k="maintenance" />}
           value={formatCurrency(maintenanceTotal, prefs)}
           tone="amber"
         />
@@ -103,15 +104,21 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
         {/* ── Left rail ── */}
         <div className="space-y-5 lg:col-span-1">
           <Panel>
-            <PanelTitle icon={<Zap size={13} strokeWidth={2.6} />}>Quick actions</PanelTitle>
+            <PanelTitle icon={<Zap size={13} strokeWidth={2.6} />}>
+              <T k="quick_actions" />
+            </PanelTitle>
+            {/* Both forms open on the bike's current odometer, so the ±100/±1k
+                steppers move from the real reading instead of from zero. */}
             <div className="space-y-2">
-              <AddRefuelForm vehicleId={vehicle.id} />
-              <AddMaintenanceForm vehicleId={vehicle.id} />
+              <AddRefuelForm vehicleId={vehicle.id} currentOdometer={currentOdometer} />
+              <AddMaintenanceForm vehicleId={vehicle.id} currentOdometer={currentOdometer} />
             </div>
           </Panel>
 
           <Panel>
-            <PanelTitle icon={<Wrench size={13} strokeWidth={2.6} />}>Manage</PanelTitle>
+            <PanelTitle icon={<Wrench size={13} strokeWidth={2.6} />}>
+              <T k="manage" />
+            </PanelTitle>
             {/* Destructive actions come last. Previously "Danger zone" sat in
                 the middle of the rail with Export and QR below it, which read
                 as though those two were also destructive. */}
@@ -151,7 +158,7 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
           <Panel padding="none">
             <div className="px-5 pt-5 sm:px-6 sm:pt-6">
               <PanelTitle icon={<History size={13} strokeWidth={2.6} />}>
-                Recent history
+                <T k="recent_history" />
               </PanelTitle>
             </div>
 
@@ -159,8 +166,8 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
               <div className="px-6 pb-8">
                 <EmptyState
                   icon={<History size={40} strokeWidth={1.5} />}
-                  title="No records yet"
-                  description="Log a refuel or a service and it will show up here."
+                  title={<T k="no_records_yet" />}
+                  description={<T k="no_records_desc" />}
                 />
               </div>
             ) : (

@@ -18,7 +18,16 @@ const ACCENTS = [
   { id: "theme-yellow", color: "#ffc61a", label: "Yellow" },
 ];
 
-const NEWS_REGIONS = ["Global", "Europe", "North America", "Asia", "Ukraine", "Russia"];
+// Values are the stored strings and must not change; only the labels are
+// translated. `key` indexes the dictionary.
+const NEWS_REGIONS = [
+  { value: "Global", key: "region_global" },
+  { value: "Europe", key: "region_europe" },
+  { value: "North America", key: "region_north_america" },
+  { value: "Asia", key: "region_asia" },
+  { value: "Ukraine", key: "region_ukraine" },
+  { value: "Russia", key: "region_russia" },
+] as const;
 
 export function SettingsClient({ settings }: { settings: UserSettings | null }) {
   const { t } = useLanguage();
@@ -135,8 +144,8 @@ export function SettingsClient({ settings }: { settings: UserSettings | null }) 
             className="field cursor-pointer appearance-none"
           >
             {NEWS_REGIONS.map((region) => (
-              <option key={region} value={region}>
-                {region}
+              <option key={region.value} value={region.value}>
+                {t(region.key)}
               </option>
             ))}
           </select>

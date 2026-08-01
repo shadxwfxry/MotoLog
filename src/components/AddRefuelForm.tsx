@@ -14,7 +14,14 @@ const ODO_STEPS = [
   { label: "+1k", value: 1000 },
 ];
 
-export function AddRefuelForm({ vehicleId }: { vehicleId: string }) {
+export function AddRefuelForm({
+  vehicleId,
+  currentOdometer,
+}: {
+  vehicleId: string;
+  /** Seeds the odometer field. Absent on the offline screen, which has no stats. */
+  currentOdometer?: number;
+}) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState(false);
@@ -23,7 +30,12 @@ export function AddRefuelForm({ vehicleId }: { vehicleId: string }) {
   const [liters, setLiters] = useState("");
   const [ppl, setPpl] = useState(""); // price per liter
   const [cost, setCost] = useState("");
-  const [odo, setOdo] = useState("");
+
+  // Starting from the bike's real reading rather than an empty field: the
+  // ±100/±1k steppers were counting up from zero, so every quick entry had to
+  // be typed out in full anyway.
+  const seedOdo = currentOdometer && currentOdometer > 0 ? String(currentOdometer) : "";
+  const [odo, setOdo] = useState(seedOdo);
 
   const adjustOdo = (amount: number) => {
     const current = parseInt(odo) || 0;
@@ -67,7 +79,7 @@ export function AddRefuelForm({ vehicleId }: { vehicleId: string }) {
       await addToSyncQueue("REFUEL", payload);
       setOfflineSaved(true);
       setOpen(false);
-      setLiters(""); setPpl(""); setCost(""); setOdo("");
+      setLiters(""); setPpl(""); setCost(""); setOdo(seedOdo);
       setTimeout(() => setOfflineSaved(false), 4000);
       return;
     }
@@ -81,7 +93,7 @@ export function AddRefuelForm({ vehicleId }: { vehicleId: string }) {
     setError(null);
     setAdded(true);
     setOpen(false);
-    setLiters(""); setPpl(""); setCost(""); setOdo("");
+    setLiters(""); setPpl(""); setCost(""); setOdo(seedOdo);
     setTimeout(() => setAdded(false), 2500);
   }
 

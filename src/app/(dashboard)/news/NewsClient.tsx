@@ -16,7 +16,7 @@ export function NewsClient({ news }: Props) {
   return (
     <PageShell>
       <PageHeader
-        eyebrow="Feed"
+        eyebrow={t("feed")}
         title={t("moto_news")}
         description={t("news_description")}
       />
@@ -61,7 +61,7 @@ export function NewsClient({ news }: Props) {
                 </p>
 
                 <span className="mt-4 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-primary">
-                  Read
+                  {t("read")}
                   <ArrowUpRight
                     size={13}
                     strokeWidth={2.8}
@@ -75,8 +75,8 @@ export function NewsClient({ news }: Props) {
       ) : (
         <EmptyState
           icon={<Newspaper size={44} strokeWidth={1.5} />}
-          title="No news for your region"
-          description="Pick a different source region in Settings."
+          title={t("no_news")}
+          description={t("no_news_desc")}
         />
       )}
     </PageShell>

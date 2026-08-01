@@ -19,6 +19,7 @@ import {
   type FormatPrefs,
 } from "@/shared/lib/format";
 import { Badge, EmptyState, Panel } from "@/shared/ui";
+import { useLanguage } from "@/components/LanguageProvider";
 
 // MapLibre touches `window` at import time, so it must never run on the server.
 const RouteMap = dynamic(() => import("./RouteMap"), {
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export function RideRecorder({ vehicles, prefs }: Props) {
+  const { t } = useLanguage();
   const router = useRouter();
 
   const status = useRideStore((s) => s.status);
@@ -131,8 +133,8 @@ export function RideRecorder({ vehicles, prefs }: Props) {
     return (
       <EmptyState
         icon={<Bike size={44} strokeWidth={1.5} />}
-        title="No bike to ride"
-        description="Add a vehicle to your garage before recording a ride."
+        title={t("no_bike_title")}
+        description={t("no_bike_desc")}
       />
     );
   }
@@ -167,11 +169,11 @@ export function RideRecorder({ vehicles, prefs }: Props) {
           <div className="pointer-events-none absolute left-4 top-4">
             {status === "idle" ? (
               <Badge tone="default" className="glass">
-                Standby
+                {t("standby")}
               </Badge>
             ) : (
               <Badge tone={recording ? "rose" : "amber"} dot pulse={recording} className="glass">
-                {recording ? "Recording" : "Paused"}
+                {recording ? t("recording") : t("paused")}
               </Badge>
             )}
           </div>
@@ -179,7 +181,7 @@ export function RideRecorder({ vehicles, prefs }: Props) {
           {/* The speed readout floats over the map so the rider's eye has one
               place to go — the number is the point of this screen. */}
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/80 to-transparent p-5 pt-14">
-            <p className="label-micro">Speed</p>
+            <p className="label-micro">{t("speed")}</p>
             <p className="num text-6xl font-black leading-none text-primary text-glow sm:text-7xl">
               {Math.round(currentSpeed)}
               <span className="ml-2 text-lg font-bold text-muted-foreground">
@@ -195,14 +197,14 @@ export function RideRecorder({ vehicles, prefs }: Props) {
 
       {/* ── Secondary figures ── */}
       <div className="grid grid-cols-3 gap-3">
-        <Metric label="Distance" value={formatDistance(stats.distanceM / 1000, prefs, 1)} />
-        <Metric label="Time" value={formatDuration(stats.durationS)} />
+        <Metric label={t("distance")} value={formatDistance(stats.distanceM / 1000, prefs, 1)} />
+        <Metric label={t("duration")} value={formatDuration(stats.durationS)} />
         {/* Hidden entirely when the device has no orientation sensor, rather
             than showing a gauge stuck at zero. */}
         {lean.supported ? (
           <Metric label="Lean" value={`${Math.round(lean.angleDeg ?? 0)}°`} />
         ) : (
-          <Metric label="Top" value={formatSpeed(stats.maxSpeedKph, prefs)} />
+          <Metric label={t("top_speed")} value={formatSpeed(stats.maxSpeedKph, prefs)} />
         )}
       </div>
 
@@ -210,7 +212,7 @@ export function RideRecorder({ vehicles, prefs }: Props) {
       {status === "idle" ? (
         <div className="space-y-3">
           <label className="label-micro block" htmlFor="ride-vehicle">
-            Vehicle
+            {t("vehicle")}
           </label>
           <select
             id="ride-vehicle"
@@ -231,7 +233,7 @@ export function RideRecorder({ vehicles, prefs }: Props) {
             className="btn-primary h-16 w-full animate-pulse-ring text-base"
           >
             <Play size={20} strokeWidth={3} fill="currentColor" />
-            Start ride
+            {t("start_ride")}
           </button>
         </div>
       ) : (
@@ -240,19 +242,19 @@ export function RideRecorder({ vehicles, prefs }: Props) {
             {recording ? (
               <>
                 <Pause size={18} strokeWidth={3} fill="currentColor" />
-                Pause
+                {t("pause_ride")}
               </>
             ) : (
               <>
                 <Play size={18} strokeWidth={3} fill="currentColor" />
-                Resume
+                {t("resume_ride")}
               </>
             )}
           </button>
 
           <button onClick={handleFinish} disabled={saving} className="btn-primary h-16 text-sm">
             <Square size={16} strokeWidth={3} fill="currentColor" />
-            {saving ? "Saving…" : "Finish"}
+            {saving ? `${t("loading")}…` : t("finish_ride")}
           </button>
 
           <button
@@ -260,7 +262,7 @@ export function RideRecorder({ vehicles, prefs }: Props) {
             className="btn col-span-2 h-11 text-muted-foreground hover:text-destructive"
           >
             <Trash2 size={14} strokeWidth={2.4} />
-            Discard ride
+            {t("discard_ride")}
           </button>
         </div>
       )}

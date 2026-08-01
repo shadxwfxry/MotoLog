@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { deleteRefuelLog, toggleRefuelPublic } from "@/features/fuel/actions";
 import { deleteMaintenanceLog, toggleMaintenancePublic } from "@/features/maintenance/actions";
+import { useLanguage } from "./LanguageProvider";
 
 interface Props {
   logId: string;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function LogActions({ logId, type, isPublic }: Props) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
@@ -42,7 +44,7 @@ export function LogActions({ logId, type, isPublic }: Props) {
       <button
         onClick={handleTogglePublic}
         disabled={loading}
-        title={isPublic ? "Hide from public" : "Show on public"}
+        title={isPublic ? t("hide_from_public") : t("show_on_public")}
         className={`flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50 ${
           isPublic
             ? "text-primary hover:bg-primary/10"
@@ -55,7 +57,7 @@ export function LogActions({ logId, type, isPublic }: Props) {
       <button
         onClick={handleDelete}
         disabled={loading}
-        title="Delete entry"
+        title={t("delete_entry")}
         className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
       >
         <Trash2 size={15} strokeWidth={2.2} />

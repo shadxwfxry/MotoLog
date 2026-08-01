@@ -118,11 +118,13 @@ export function AddVehicleForm() {
               />
             </FormField>
             <FormField label={t("type")}>
+              {/* The value stays the canonical English slug — it is what goes
+                  into the database — while the label follows the UI language. */}
               <select name="type" className="field cursor-pointer appearance-none">
-                <option value="motorcycle">Motorcycle</option>
-                <option value="scooter">Scooter</option>
-                <option value="atv">ATV</option>
-                <option value="car">Car</option>
+                <option value="motorcycle">{t("type_motorcycle")}</option>
+                <option value="scooter">{t("type_scooter")}</option>
+                <option value="atv">{t("type_atv")}</option>
+                <option value="car">{t("type_car")}</option>
               </select>
             </FormField>
           </div>

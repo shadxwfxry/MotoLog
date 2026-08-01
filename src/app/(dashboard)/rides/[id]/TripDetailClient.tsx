@@ -17,6 +17,7 @@ import {
   type FormatPrefs,
 } from "@/shared/lib/format";
 import { Panel, PanelTitle, PageShell, StatTile } from "@/shared/ui";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const RouteMap = dynamicImport(() => import("@/features/trips/components/RouteMap"), {
   ssr: false,
@@ -38,6 +39,7 @@ interface Trip {
 }
 
 export function TripDetailClient({ trip, prefs }: { trip: Trip; prefs: FormatPrefs }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,12 +84,12 @@ export function TripDetailClient({ trip, prefs }: { trip: Trip; prefs: FormatPre
           className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary"
         >
           <ChevronLeft size={14} strokeWidth={2.8} />
-          Rides
+          {t("rides")}
         </Link>
 
         <div className="min-w-0">
           <h1 className="truncate font-display text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">
-            {trip.title || "Ride"}
+            {trip.title || t("ride")}
           </h1>
           <p
             suppressHydrationWarning
@@ -115,12 +117,12 @@ export function TripDetailClient({ trip, prefs }: { trip: Trip; prefs: FormatPre
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <StatTile
           tone="primary"
-          label="Distance"
+          label={t("distance")}
           value={formatDistance(trip.distanceM / 1000, prefs, 1)}
         />
-        <StatTile label="Duration" value={formatDuration(trip.durationS)} />
-        <StatTile tone="cyan" label="Avg speed" value={formatSpeed(trip.avgSpeedKph, prefs)} />
-        <StatTile tone="lime" label="Top speed" value={formatSpeed(trip.maxSpeedKph, prefs)} />
+        <StatTile label={t("duration")} value={formatDuration(trip.durationS)} />
+        <StatTile tone="cyan" label={t("avg_speed")} value={formatSpeed(trip.avgSpeedKph, prefs)} />
+        <StatTile tone="lime" label={t("top_speed")} value={formatSpeed(trip.maxSpeedKph, prefs)} />
       </div>
 
       {/* Lean is shown only when the recording device actually reported it. */}
@@ -128,7 +130,7 @@ export function TripDetailClient({ trip, prefs }: { trip: Trip; prefs: FormatPre
         <Panel className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-2.5 text-sm font-semibold text-muted-foreground">
             <Compass size={16} strokeWidth={2.4} className="text-signal-violet" />
-            Max lean angle
+            {t("max_lean")}
           </span>
           <span className="num text-3xl font-black text-signal-violet">
             {Math.round(trip.maxLeanAngleDeg)}°
@@ -138,7 +140,7 @@ export function TripDetailClient({ trip, prefs }: { trip: Trip; prefs: FormatPre
 
       {speedSeries.length > 1 && (
         <Panel>
-          <PanelTitle icon={<Activity size={13} strokeWidth={2.6} />}>Speed profile</PanelTitle>
+          <PanelTitle icon={<Activity size={13} strokeWidth={2.6} />}>{t("speed_profile")}</PanelTitle>
 
           {/* `text-primary` + `currentColor` below is deliberate: recharts writes
               these straight onto SVG attributes, where `var(--primary)` would
@@ -199,7 +201,7 @@ export function TripDetailClient({ trip, prefs }: { trip: Trip; prefs: FormatPre
         className="btn h-12 w-full border border-destructive/25 bg-destructive/10 text-destructive transition-colors hover:bg-destructive/20"
       >
         <Trash2 size={15} strokeWidth={2.4} />
-        {deleting ? "Deleting…" : "Delete ride"}
+        {deleting ? `${t("loading")}…` : t("delete_ride")}
       </button>
     </PageShell>
   );

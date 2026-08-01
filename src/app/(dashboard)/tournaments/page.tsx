@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Eye, Settings2, Trophy } from "lucide-react";
 import { getOptionalAuthUser } from "@/server/auth/guards";
 import { Badge, Panel } from "@/shared/ui";
+import { T } from "@/components/T";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +35,11 @@ export default async function TournamentsPage({ searchParams }: PageProps) {
           </span>
           <div>
             <h1 className="font-display text-xl font-black uppercase leading-none tracking-tight">
-              Tournaments
+              <T k="tournaments" />
             </h1>
             <div className="mt-1.5">
               <Badge tone={isAdminMode ? "amber" : "cyan"} dot>
-                {isAdminMode ? "Organiser mode" : "Spectator mode"}
+                <T k={isAdminMode ? "organiser_mode" : "spectator_mode"} />
               </Badge>
             </div>
           </div>
@@ -51,12 +52,12 @@ export default async function TournamentsPage({ searchParams }: PageProps) {
           {isAdminMode ? (
             <>
               <Eye size={15} strokeWidth={2.6} />
-              Spectator
+              <T k="spectator" />
             </>
           ) : (
             <>
               <Settings2 size={15} strokeWidth={2.6} />
-              Organiser
+              <T k="organiser" />
             </>
           )}
         </a>

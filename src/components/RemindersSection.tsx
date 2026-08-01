@@ -164,7 +164,7 @@ export function RemindersSection({
                           {remaining !== null && (
                             <span className="ml-1.5 opacity-70">
                               ({remaining.toLocaleString()} km{" "}
-                              {r.targetOdometer > currentOdometer ? "left" : "overdue"})
+                              {r.targetOdometer > currentOdometer ? t("km_left") : t("km_overdue")})
                             </span>
                           )}
                         </p>
@@ -180,7 +180,7 @@ export function RemindersSection({
                       {r.intervalKm && (
                         <p className="num flex items-center gap-1 text-[11px] text-muted-foreground opacity-70">
                           <RotateCw size={10} strokeWidth={2.6} />
-                          every {r.intervalKm.toLocaleString()} km
+                          {t("every")} {r.intervalKm.toLocaleString()} km
                         </p>
                       )}
                       {r.description && (

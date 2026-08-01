@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Eraser, Trash2 } from "lucide-react";
 import { clearVehicleStats, deleteVehicle } from "@/features/garage/actions";
+import { useLanguage } from "./LanguageProvider";
 
 export function VehicleActions({ vehicleId }: { vehicleId: string }) {
+  const { t } = useLanguage();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
 
@@ -32,7 +34,7 @@ export function VehicleActions({ vehicleId }: { vehicleId: string }) {
 
   return (
     <div className="space-y-2 border-t pt-4 [border-color:hsl(var(--hairline))]">
-      <p className="label-micro mb-2 text-signal-rose/70">Danger zone</p>
+      <p className="label-micro mb-2 text-signal-rose/70">{t("danger_zone")}</p>
 
       <button
         onClick={handleClearStats}
@@ -40,7 +42,7 @@ export function VehicleActions({ vehicleId }: { vehicleId: string }) {
         className="btn h-11 w-full justify-start border border-signal-amber/25 bg-signal-amber/10 px-4 text-signal-amber hover:bg-signal-amber/20"
       >
         <Eraser size={14} strokeWidth={2.4} />
-        {isCleaning ? "Cleaning…" : "Clear all history"}
+        {isCleaning ? `${t("loading")}…` : t("clear_all_history")}
       </button>
 
       <button
@@ -49,7 +51,7 @@ export function VehicleActions({ vehicleId }: { vehicleId: string }) {
         className="btn h-11 w-full justify-start border border-destructive/25 bg-destructive/10 px-4 text-destructive hover:bg-destructive/20"
       >
         <Trash2 size={14} strokeWidth={2.4} />
-        {isDeleting ? "Deleting…" : "Delete vehicle"}
+        {isDeleting ? `${t("loading")}…` : t("delete_vehicle")}
       </button>
     </div>
   );

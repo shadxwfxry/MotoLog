@@ -21,7 +21,14 @@ const ODO_STEPS = [
   { label: "+1k", value: 1000 },
 ];
 
-export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
+export function AddMaintenanceForm({
+  vehicleId,
+  currentOdometer,
+}: {
+  vehicleId: string;
+  /** Seeds the odometer field. Absent on the offline screen, which has no stats. */
+  currentOdometer?: number;
+}) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [added, setAdded] = useState(false);
@@ -30,7 +37,9 @@ export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
   const [category, setCategory] = useState("service");
   const [customType, setCustomType] = useState("");
   const [selectedPreset, setSelectedPreset] = useState("");
-  const [odo, setOdo] = useState("");
+  // See AddRefuelForm: the steppers were counting up from zero.
+  const seedOdo = currentOdometer && currentOdometer > 0 ? String(currentOdometer) : "";
+  const [odo, setOdo] = useState(seedOdo);
 
   const adjustOdo = (amount: number) => {
     const current = parseInt(odo) || 0;
@@ -52,7 +61,7 @@ export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
       await addToSyncQueue("MAINTENANCE", payload);
       setOfflineSaved(true);
       setOpen(false);
-      setCustomType(""); setSelectedPreset(""); setOdo("");
+      setCustomType(""); setSelectedPreset(""); setOdo(seedOdo);
       setTimeout(() => setOfflineSaved(false), 4000);
       return;
     }
@@ -66,7 +75,7 @@ export function AddMaintenanceForm({ vehicleId }: { vehicleId: string }) {
     setError(null);
     setAdded(true);
     setOpen(false);
-    setCustomType(""); setSelectedPreset(""); setOdo("");
+    setCustomType(""); setSelectedPreset(""); setOdo(seedOdo);
     setTimeout(() => setAdded(false), 2500);
   }
 
