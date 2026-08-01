@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-// maplibre-gl v6 is ESM-only with named exports; there is no default export.
-import * as maplibregl from "maplibre-gl";
+// Pinned to v5: v6 ships as two separate ES modules (`maplibre-gl.mjs` plus
+// `maplibre-gl-shared.mjs`) and webpack evaluated the first before the second,
+// so the map bundle threw `ReferenceError: _n is not defined` and took the
+// whole /rides route down — in production builds only. v5 is a single
+// self-contained bundle with a default export and has no such ordering hazard.
+import maplibregl from "maplibre-gl";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { boundsOf, type GeoFix } from "../geo";
@@ -10,11 +14,30 @@ import { boundsOf, type GeoFix } from "../geo";
 /**
  * Free vector tiles, no API key and no usage limits.
  *
- * OpenFreeMap serves the OpenStreetMap-derived Liberty style; there is no token
- * to leak in the client bundle and no billing to enable, which is why this was
- * chosen over Mapbox or Google.
+ * OpenFreeMap serves OpenStreetMap-derived styles; there is no token to leak in
+ * the client bundle and no billing to enable, which is why this was chosen over
+ * Mapbox or Google.
+ *
+ * The style is picked once, at mount, from the theme already on <html>: a
+ * bright basemap inside the dark cockpit UI was the single loudest thing on the
+ * screen and made the route line hard to follow.
  */
-const TILE_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const STYLE_BASE = "https://tiles.openfreemap.org/styles";
+
+function resolveStyle(): string {
+  const isDark =
+    typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+  return `${STYLE_BASE}/${isDark ? "dark" : "positron"}`;
+}
+
+/** Accent colour of the route, read from the live theme token. */
+function routeColor(): string {
+  if (typeof document === "undefined") return "#ff6a1a";
+  const primary = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+  // MapLibre paints on a canvas, where `var()` never resolves — the value has to
+  // be materialised into a concrete colour string here.
+  return primary ? `hsl(${primary})` : "#ff6a1a";
+}
 
 export interface RiderMarker {
   id: string;
@@ -38,6 +61,7 @@ interface Props {
 
 const ROUTE_SOURCE = "route";
 const ROUTE_LAYER = "route-line";
+const ROUTE_GLOW_LAYER = "route-glow";
 
 export default function RouteMap({ track, markers, followMarkerId, className }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
@@ -51,7 +75,7 @@ export default function RouteMap({ track, markers, followMarkerId, className }: 
 
     const instance = new maplibregl.Map({
       container: container.current,
-      style: TILE_STYLE,
+      style: resolveStyle(),
       center: [30.5234, 50.4501],
       zoom: 11,
       // Riders read this with gloves on at a standstill; rotation just gets in
@@ -64,7 +88,16 @@ export default function RouteMap({ track, markers, followMarkerId, className }: 
     instance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.current = instance;
 
+    // MapLibre measures the container once, at construction. Inside a panel
+    // that is still laying out — or on a tab that was hidden when it mounted —
+    // it latched onto the wrong size and painted tiles into a fraction of the
+    // box, leaving the rest blank. Observing the element keeps the canvas and
+    // the panel the same size for the life of the map.
+    const observer = new ResizeObserver(() => instance.resize());
+    observer.observe(container.current);
+
     return () => {
+      observer.disconnect();
       markerRefs.current.forEach((marker) => marker.remove());
       markerRefs.current.clear();
       instance.remove();
@@ -90,13 +123,25 @@ export default function RouteMap({ track, markers, followMarkerId, className }: 
       if (existing) {
         existing.setData(geojson);
       } else {
+        const color = routeColor();
         instance.addSource(ROUTE_SOURCE, { type: "geojson", data: geojson });
+
+        // Two passes: a wide, soft pass that reads as a glow around the route,
+        // then the crisp line on top. One flat stroke disappeared against busy
+        // city tiles.
+        instance.addLayer({
+          id: ROUTE_GLOW_LAYER,
+          type: "line",
+          source: ROUTE_SOURCE,
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: { "line-color": color, "line-width": 12, "line-opacity": 0.22, "line-blur": 8 },
+        });
         instance.addLayer({
           id: ROUTE_LAYER,
           type: "line",
           source: ROUTE_SOURCE,
           layout: { "line-join": "round", "line-cap": "round" },
-          paint: { "line-color": "#f97316", "line-width": 4, "line-opacity": 0.9 },
+          paint: { "line-color": color, "line-width": 4 },
         });
       }
 
@@ -182,17 +227,19 @@ function updateMarkerElement(el: HTMLElement, rider: RiderMarker): void {
   const badge = el.querySelector<HTMLElement>('[data-role="badge"]');
   if (!dot || !badge) return;
 
-  dot.className = `w-4 h-4 rounded-full border-2 border-white shadow-lg ${
-    rider.isSelf ? "bg-orange-500" : "bg-blue-500"
-  }`;
+  // These are DOM overlays, not canvas paint, so Tailwind classes apply — but
+  // they live outside React, hence the manual className assignment.
+  dot.className = rider.isSelf
+    ? "h-4 w-4 rounded-full bg-primary ring-2 ring-primary/40 shadow-[0_0_16px_hsl(var(--primary))]"
+    : "h-3.5 w-3.5 rounded-full bg-signal-cyan ring-2 ring-signal-cyan/40 shadow-[0_0_14px_hsl(var(--signal-cyan))]";
 
   badge.className =
-    "px-1.5 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-bold whitespace-nowrap leading-tight text-center";
+    "glass rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-foreground whitespace-nowrap leading-tight text-center border border-[hsl(var(--hairline))]";
   badge.textContent = rider.label;
 
   if (rider.sublabel) {
     const sub = document.createElement("span");
-    sub.className = "block font-normal opacity-80";
+    sub.className = "block font-mono font-normal normal-case tracking-normal opacity-70";
     sub.textContent = rider.sublabel;
     badge.appendChild(sub);
   }

@@ -28,6 +28,34 @@ src/
 The layering is enforced, not just documented: `.eslintrc.json` fails the build
 if anything outside `src/server/repositories/**` imports `@/server/db`.
 
+## The design system
+
+Added in the redesign of 1 Aug 2026. The look is a dark "telemetry HUD":
+near-black surfaces, hairline edges, neon signal colours and monospace figures.
+
+**Everything derives from tokens in `globals.css`.** Screens speak only in
+`bg-card` / `border-border` / `text-primary` / `text-signal-*`, so retuning the
+palette is a one-file change and no screen can drift off-system. The six accent
+presets set a single `--primary` hue that every glow, ring, chart stroke and map
+route reads from.
+
+**Three faces, all with Cyrillic.** Unbounded for display, Inter for body,
+JetBrains Mono for figures. The app ships English, Russian and Ukrainian; a
+display face without Cyrillic would silently fall back mid-heading on two of the
+three locales.
+
+**`src/shared/ui` is the only way to make a surface.** `Panel`, `StatTile`,
+`Badge`, `EmptyState`, `PageHeader`, `Modal` and `Skeleton` replaced markup that
+had been copied between screens until it carried three radii, four paddings and
+two shadow recipes.
+
+**Numbers use `.num`** — tabular monospace, so live values do not jitter as
+digits change, with negative word-spacing because `toLocaleString()` groups
+thousands with a wide no-break space in ru/uk.
+
+**Motion is decorative and opt-out.** The ambient drift and panel sweeps are
+disabled wholesale under `prefers-reduced-motion`.
+
 ## Decisions worth knowing
 
 **Prisma stays; Supabase is used only for Realtime.** The database is already
@@ -75,11 +103,13 @@ silently swallowed failures as a result.
 
 ## Outstanding
 
-- **The pending migration has not been applied.** The database was unreachable
-  during the refactor (paused project or rotated credentials). See
-  `prisma/migrations/README.md`; it is purely additive.
 - **Group rides need three Supabase values** — see `.env.example`. The page
   states which are missing rather than failing opaquely.
+- **`maplibre-gl` is pinned to v5.** v6 ships as two separate ES modules and
+  webpack evaluated them out of order, so `/rides` and `/rides/[id]` threw
+  `ReferenceError: _n is not defined` — in production builds only, which is why
+  dev-mode testing never saw it. Do not bump to v6 without re-checking a
+  `next build` served by `next start`, not just `next dev`.
 - **`next@14.1.0` has a published security advisory.** Upgrading was out of
   scope for this refactor but should be scheduled.
 - Geolocation and `DeviceOrientationEvent` require HTTPS, so testing the

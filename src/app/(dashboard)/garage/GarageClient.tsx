@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { ArrowUpRight, Bike, Gauge, Share2 } from "lucide-react";
 import { useLanguage } from "@/components/LanguageProvider";
 import { AddVehicleForm } from "@/components/AddVehicleForm";
 import { db } from "@/lib/dexie";
 import { cacheVehiclesLocally } from "@/lib/offlineSync";
 import { currentOdometerOf } from "@/features/maintenance/reminders";
+import { Badge, EmptyState, Panel, PageHeader, PageShell } from "@/shared/ui";
 import type { GarageVehicle } from "@/app/types";
 
 export function GarageClient({ vehicles }: { vehicles: GarageVehicle[] }) {
@@ -28,79 +30,117 @@ export function GarageClient({ vehicles }: { vehicles: GarageVehicle[] }) {
   const handleShare = async (slug: string) => {
     const url = `${window.location.origin}/public/${slug}`;
     await navigator.clipboard.writeText(url);
-    alert(t("link_copied") || "Link copied to clipboard!");
+    alert(t("link_copied"));
   };
 
   return (
-    <div className="max-w-screen-lg mx-auto px-4 py-8 space-y-8 pb-24">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight uppercase">{t("go_garage")}</h1>
-        <AddVehicleForm />
-      </div>
+    <PageShell>
+      <PageHeader
+        // The count belongs in the eyebrow, not a sentence: "1 гараж" read as
+        // nonsense in Russian and Ukrainian.
+        eyebrow={`${t("fleet")} · ${displayedVehicles.length}`}
+        title={t("go_garage")}
+        action={<AddVehicleForm />}
+      />
 
       {displayedVehicles.length === 0 ? (
-        <div className="text-center py-24 bg-card rounded-3xl border-2 border-dashed border-border/50">
-          <div className="text-7xl mb-6 grayscale opacity-20">🏍️</div>
-          <p className="text-xl font-medium text-muted-foreground">{t("garage_empty")}</p>
-          <p className="text-sm text-muted-foreground mt-2">{t("start_adding")}</p>
-        </div>
+        <EmptyState
+          icon={<Bike size={48} strokeWidth={1.5} />}
+          title={t("garage_empty")}
+          description={t("start_adding")}
+        />
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2">
-          {displayedVehicles.map((vehicle) => {
+        <div className="grid gap-5 sm:grid-cols-2">
+          {displayedVehicles.map((vehicle, index) => {
             const lastOdo = currentOdometerOf(vehicle);
+
             return (
-              <div key={vehicle.id} className="group relative block rounded-3xl border border-border bg-card overflow-hidden hover:border-primary/50 hover:shadow-2xl hover:shadow-primary/5 transition-all duration-300">
+              <Panel
+                key={vehicle.id}
+                interactive
+                padding="none"
+                className="group animate-rise-in overflow-hidden"
+                style={{ animationDelay: `${Math.min(index, 6) * 60}ms` }}
+              >
                 <Link href={`/garage/${vehicle.id}`} className="block">
-                  <div className="h-48 w-full bg-muted relative overflow-hidden">
+                  <div className="relative h-52 w-full overflow-hidden">
                     {vehicle.photoUrl ? (
-                      <img src={vehicle.photoUrl} alt={vehicle.model} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img
+                        src={vehicle.photoUrl}
+                        alt={vehicle.model}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+                      />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-                         <span className="text-6xl grayscale opacity-20 select-none">🏍️</span>
-                         {vehicle.brandName && <span className="absolute top-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-tighter text-white border border-white/10">{vehicle.brandName}</span>}
+                      <div className="flex h-full w-full items-center justify-center bg-grid-fine bg-grid">
+                        <Bike size={64} strokeWidth={1} className="text-foreground/10" />
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
-                    <div className="absolute bottom-4 left-6">
-                       <h2 className="text-xl font-bold text-white uppercase tracking-tight">{vehicle.make} {vehicle.model}</h2>
-                       <p className="text-xs text-white/70 font-medium tracking-widest">{vehicle.year} · {vehicle.engineDisplacement}cc</p>
+
+                    {/* Two overlays: a dark base so the title stays legible on
+                        any photo, plus an accent wash that only appears on
+                        hover, tinting the machine in the app's own colour. */}
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 bg-gradient-to-t from-card via-card/45 to-transparent"
+                    />
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 bg-gradient-to-tr from-primary/25 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                    />
+
+                    {vehicle.brandName && (
+                      <span className="absolute left-4 top-4">
+                        <Badge tone="default" className="glass">
+                          {vehicle.brandName}
+                        </Badge>
+                      </span>
+                    )}
+
+                    <span className="absolute right-4 top-4 flex h-9 w-9 translate-x-2 items-center justify-center rounded-md border border-primary/40 bg-primary/15 text-primary opacity-0 backdrop-blur-md transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
+                      <ArrowUpRight size={17} strokeWidth={2.6} />
+                    </span>
+
+                    <div className="absolute bottom-4 left-5 right-5">
+                      <h2 className="font-display text-xl font-black uppercase leading-none tracking-tight">
+                        {vehicle.make}{" "}
+                        <span className="text-primary">{vehicle.model}</span>
+                      </h2>
+                      <p className="num mt-1.5 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                        {vehicle.year} · {vehicle.engineDisplacement ?? "—"} cc
+                      </p>
                     </div>
                   </div>
                 </Link>
 
-                <div className="p-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t("last_odometer")}</p>
-                      <p className="text-lg font-black">{lastOdo.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">km</span></p>
-                    </div>
-                    <div className="flex flex-col items-end justify-center">
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          // /public/[slug] looks the vehicle up by slug; passing
-                          // the id here produced a 404 on every shared link.
-                          void handleShare(vehicle.slug);
-                        }}
-                        className="p-2 rounded-xl bg-muted hover:bg-primary/10 hover:text-primary transition-colors"
-                        title={t("share") || "Share"}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
-                      </button>
-                    </div>
+                <div className="flex items-center justify-between gap-4 border-t px-5 py-4 [border-color:hsl(var(--hairline))]">
+                  <div>
+                    <p className="label-micro flex items-center gap-1.5">
+                      <Gauge size={11} strokeWidth={2.6} />
+                      {t("last_odometer")}
+                    </p>
+                    <p className="num mt-0.5 text-xl font-black">
+                      {lastOdo.toLocaleString()}
+                      <span className="ml-1 text-[11px] font-bold text-muted-foreground">km</span>
+                    </p>
                   </div>
-                </div>
 
-                <div className="absolute top-4 right-4">
-                   <div className="w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                   </div>
+                  <button
+                    onClick={() => {
+                      // /public/[slug] looks the vehicle up by slug; passing the
+                      // id here produced a 404 on every shared link.
+                      void handleShare(vehicle.slug);
+                    }}
+                    title={t("share")}
+                    className="flex h-10 w-10 items-center justify-center rounded-md border text-muted-foreground transition-all hover:border-primary/50 hover:text-primary [border-color:hsl(var(--hairline))]"
+                  >
+                    <Share2 size={16} strokeWidth={2.2} />
+                  </button>
                 </div>
-              </div>
+              </Panel>
             );
           })}
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

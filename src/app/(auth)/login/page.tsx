@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
+import { AuthShell, Field } from "../AuthShell";
 
 export default function LoginPage() {
   const { t } = useLanguage();
@@ -36,69 +37,49 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-6rem)] px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-2">🏍</div>
-          <h1 className="text-2xl font-bold">MotoLog</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t("welcome_desc")}</p>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card shadow-sm p-6 space-y-5">
-          <h2 className="text-lg font-semibold">{t("login")}</h2>
-
-          {error && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-sm font-medium">{t("email")}</label>
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary transition"
-                placeholder="test@example.com"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium">{t("password")}</label>
-              <input
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary transition"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 disabled:opacity-60 transition"
-            >
-              {loading ? "..." : t("login")}
-            </button>
-          </form>
-
-          <p className="text-sm text-center text-muted-foreground">
+    <AuthShell
+      title={t("login")}
+      subtitle={t("welcome_desc")}
+      error={error}
+      footer={
+        <div className="space-y-3">
+          <p>
             {t("no_account")}{" "}
-            <Link href="/register" className="text-primary hover:underline font-medium">
+            <Link href="/register" className="font-bold text-primary hover:underline">
               {t("register")}
             </Link>
           </p>
-
-          <div className="pt-1 border-t border-border text-xs text-center text-muted-foreground">
-            Demo: <code className="bg-muted px-1.5 py-0.5 rounded text-xs">test@example.com</code> / <code className="bg-muted px-1.5 py-0.5 rounded text-xs">password123</code>
-          </div>
+          {/* Kept from the previous design — this is the shared demo account. */}
+          <p className="num text-[11px] text-muted-foreground/70">
+            demo · test@example.com / password123
+          </p>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field
+          label={t("email")}
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+        />
+        <Field
+          label={t("password")}
+          type="password"
+          required
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+        />
+
+        <button type="submit" disabled={loading} className="btn-primary h-12 w-full">
+          {loading ? `${t("loading")}…` : t("login")}
+        </button>
+      </form>
+    </AuthShell>
   );
 }

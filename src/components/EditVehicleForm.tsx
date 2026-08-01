@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { Camera, Check, Settings2, X } from "lucide-react";
 import { updateVehicleCharacteristics } from "@/features/garage/actions";
 import { useLanguage } from "./LanguageProvider";
 import { compressImage } from "@/lib/imageUtils";
+import { FormField } from "@/shared/ui";
 
 interface Props {
   vehicleId: string;
   defaultValues: {
+    // `make`/`model`/`year` are re-submitted as hidden fields because the
+    // action validates the whole vehicle schema. They were read off this object
+    // behind three `@ts-ignore` comments; declaring them is the actual fix.
+    make: string;
+    model: string;
+    year: number;
     engineDisplacement?: number | null;
     power?: number | null;
     weight?: number | null;
@@ -20,8 +28,9 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  const isFullyConfigured = defaultValues.engineDisplacement && defaultValues.power && defaultValues.weight;
+
+  const isFullyConfigured =
+    defaultValues.engineDisplacement && defaultValues.power && defaultValues.weight;
   const [isEditing, setIsEditing] = useState(!isFullyConfigured);
   const [photoBase64, setPhotoBase64] = useState<string>(defaultValues.photoUrl || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +49,7 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setError(null);
-    
+
     if (photoBase64) {
       formData.set("photoUrl", photoBase64);
     }
@@ -62,113 +71,117 @@ export function EditVehicleForm({ vehicleId, defaultValues }: Props) {
 
   if (!isEditing) {
     return (
-      <button 
-        onClick={() => setIsEditing(true)}
-        className="w-full text-center text-xs text-muted-foreground hover:text-primary py-3 bg-muted/30 rounded-xl border border-border hover:border-primary/50 transition-all font-medium"
-      >
-        ⚙️ {t("edit_specs_photo")}
+      <button onClick={() => setIsEditing(true)} className="btn-ghost h-11 w-full">
+        <Settings2 size={14} strokeWidth={2.4} />
+        {t("edit_specs_photo")}
       </button>
     );
   }
 
   return (
-    <form action={handleSubmit as any} className="mt-4 space-y-3 p-4 border border-border rounded-xl bg-muted/30 relative">
+    <form
+      action={handleSubmit as any}
+      className="relative space-y-4 rounded-md border bg-background/40 p-4 [border-color:hsl(var(--hairline))]"
+    >
       {isFullyConfigured && (
-        <button 
-          type="button" 
-          onClick={() => setIsEditing(false)} 
-          className="absolute top-3 right-3 text-muted-foreground hover:text-foreground p-1"
+        <button
+          type="button"
+          onClick={() => setIsEditing(false)}
+          aria-label={t("close")}
+          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          <X size={15} strokeWidth={2.6} />
         </button>
       )}
-      
-      {/* Hidden inputs to pass validation schema */}
-      {/* @ts-ignore */}
+
+      {/* Re-submitted unchanged so the action's schema validates. */}
       <input type="hidden" name="make" value={defaultValues.make} />
-      {/* @ts-ignore */}
       <input type="hidden" name="model" value={defaultValues.model} />
-      {/* @ts-ignore */}
       <input type="hidden" name="year" value={defaultValues.year} />
-      
-      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{t("characteristics") || "Specs & Photo"}</h4>
+
+      <p className="label-micro">{t("characteristics")}</p>
+
+      {/* Unit symbols rather than the translated names: "Мощность (л.с.)" and
+          "Вес (кг)" are far too wide for a third of this rail and ran into each
+          other. The same three fields read as cc/hp/kg when adding a vehicle. */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">{t("engine_cc")}</label>
+        <FormField label="cc">
           <input
             name="engineDisplacement"
             type="number"
             min="0"
             defaultValue={defaultValues.engineDisplacement ?? ""}
-            placeholder="cc"
-            className="w-full p-2.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+            className="field num py-2.5"
           />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">{t("power_hp")}</label>
+        </FormField>
+        <FormField label="hp">
           <input
             name="power"
             type="number"
             min="0"
             defaultValue={defaultValues.power ?? ""}
-            placeholder="hp"
-            className="w-full p-2.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+            className="field num py-2.5"
           />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">{t("weight_kg")}</label>
+        </FormField>
+        <FormField label="kg">
           <input
             name="weight"
             type="number"
             min="0"
             defaultValue={defaultValues.weight ?? ""}
-            placeholder="kg"
-            className="w-full p-2.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+            className="field num py-2.5"
           />
-        </div>
+        </FormField>
       </div>
-      
-      <div className="flex flex-col gap-1 mt-2">
-        <label className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Vehicle Photo</label>
-        <input 
-          type="file" 
-          accept="image/*" 
+
+      <div className="space-y-1.5">
+        <span className="label-micro">{t("photo_url")}</span>
+        <input
+          type="file"
+          accept="image/*"
           ref={fileInputRef}
           onChange={handleFileChange}
-          className="hidden" 
+          className="hidden"
         />
-        <div 
+        <button
+          type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="w-full h-24 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition overflow-hidden relative"
+          className="relative flex h-28 w-full flex-col items-center justify-center gap-1.5 overflow-hidden rounded-md border border-dashed transition-all hover:border-primary/50 hover:bg-primary/[0.04] [border-color:hsl(var(--hairline))]"
         >
           {photoBase64 ? (
-            <img src={photoBase64} alt="Preview" className="w-full h-full object-cover" />
+            <img src={photoBase64} alt="Preview" className="h-full w-full object-cover" />
           ) : (
             <>
-              <span className="text-xl mb-1">📸</span>
-              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Tap to upload photo</span>
+              <Camera size={18} strokeWidth={1.8} className="text-muted-foreground" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                {t("tap_to_upload")}
+              </span>
             </>
           )}
-        </div>
+        </button>
         <input type="hidden" name="photoUrl" value={photoBase64} />
       </div>
 
       {error && (
-        <div className="p-2 text-[10px] bg-destructive/10 text-destructive rounded border border-destructive/20 font-bold animate-in fade-in zoom-in duration-200">
-          ⚠️ {error}
-        </div>
+        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs font-semibold text-destructive">
+          {error}
+        </p>
       )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-bold tracking-wide hover:bg-primary/90 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-      >
+
+      <button type="submit" disabled={loading} className="btn-primary h-11 w-full">
         {loading ? (
-           <span className="flex items-center justify-center gap-2">
-             <span className="w-3 h-3 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-             Saving...
-           </span>
-        ) : saved ? "✓ Saved!" : t("save_changes")}
+          <>
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            {t("loading")}…
+          </>
+        ) : saved ? (
+          <>
+            <Check size={14} strokeWidth={3} />
+            {t("save_changes")}
+          </>
+        ) : (
+          t("save_changes")
+        )}
       </button>
     </form>
   );

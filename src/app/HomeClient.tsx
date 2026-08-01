@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { ArrowRight, Bell, Bike, Gauge, Plus } from "lucide-react";
 import { useLanguage } from "@/components/LanguageProvider";
 import { SmartSearch } from "@/components/SmartSearch";
 import { db } from "@/lib/dexie";
@@ -14,6 +15,8 @@ import {
   scoreReminders,
 } from "@/features/maintenance/reminders";
 import { useActiveVehicleStore } from "@/store/activeVehicleStore";
+import { Badge, Panel, PanelTitle, PageHeader, PageShell } from "@/shared/ui";
+import type { Tone } from "@/shared/ui";
 import type { HomeVehicle } from "./types";
 
 interface Props {
@@ -21,7 +24,7 @@ interface Props {
 }
 
 export function HomeClient({ vehicles }: Props) {
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const resolveActiveId = useActiveVehicleStore((s) => s.resolveActiveId);
   const activeVehicleId = useActiveVehicleStore((s) => s.activeVehicleId);
 
@@ -58,28 +61,11 @@ export function HomeClient({ vehicles }: Props) {
     [activeVehicle, currentOdometer],
   );
 
-  const hasOverdue = anyOverdue(activeScored);
-  const activeReminders = activeScored;
-
-  // Active status text & badges
-  let statusBadge = (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20">
-      ● {lang === "uk" ? "Готовий до сезону" : lang === "ru" ? "Готов к сезону" : "Ready for Season"}
-    </span>
-  );
-  if (hasOverdue) {
-    statusBadge = (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20 animate-pulse">
-        ● {lang === "uk" ? "Потребує ТО" : lang === "ru" ? "Требует ТО" : "Needs Service"}
-      </span>
-    );
-  } else if (activeReminders.length > 0) {
-    statusBadge = (
-      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
-        ● {lang === "uk" ? "Заплановано ТО" : lang === "ru" ? "Запланировано ТО" : "Scheduled"}
-      </span>
-    );
-  }
+  const status: { tone: Tone; label: string; pulse: boolean } = anyOverdue(activeScored)
+    ? { tone: "rose", label: t("needs_service"), pulse: true }
+    : activeScored.length > 0
+      ? { tone: "amber", label: t("scheduled_service"), pulse: false }
+      : { tone: "lime", label: t("ready_for_season"), pulse: false };
 
   // Most pressing reminders across the whole garage, not just the active bike.
   const urgentReminders = useMemo(
@@ -93,171 +79,150 @@ export function HomeClient({ vehicles }: Props) {
           ).map((r) => ({ ...r, vehicleName: `${v.make} ${v.model}` })),
         )
         .sort((a, b) => b.rank - a.rank)
-        .slice(0, 2),
+        .slice(0, 3),
     [displayedVehicles],
   );
 
   return (
-    <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6 pb-24">
-      {/* Welcome header */}
-      <div className="space-y-1">
-        <h1 suppressHydrationWarning className="text-2xl font-bold tracking-tight">
-          {t("welcome_back") || "Welcome back!"}
-        </h1>
-        <p className="text-xs text-muted-foreground">
-          {lang === "uk"
-            ? "Контролюйте обслуговування та витрати вашого байка в реальному часі."
-            : lang === "ru"
-            ? "Контролируйте обслуживание и расходы вашего байка в реальном времени."
-            : "Monitor your motorcycle maintenance and expenses in real-time."}
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow={t("overview")}
+        title={t("welcome_back")}
+        description={t("home_subtitle")}
+      />
 
       <SmartSearch />
 
-      {/* Widgets Grid */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Active Ride Widget */}
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                🏍️ {lang === "uk" ? "Активний байк" : lang === "ru" ? "Активный байк" : "Active Ride"}
-              </h3>
-              {activeVehicle && statusBadge}
+      <div className="grid gap-5 lg:grid-cols-5">
+        {/* ── Active bike: the hero readout ── */}
+        <Panel corners sweep padding="none" className="animate-rise-in lg:col-span-3">
+          {/* The bike's own photo, pushed far back and desaturated, so the
+              panel is unmistakably about *this* machine without the image
+              competing with the numbers on top of it. */}
+          {activeVehicle?.photoUrl && (
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-cover bg-center opacity-[0.14] mix-blend-luminosity"
+              style={{ backgroundImage: `url(${activeVehicle.photoUrl})` }}
+            />
+          )}
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-tr from-card via-card/80 to-transparent"
+          />
+
+          <div className="relative flex h-full flex-col justify-between gap-6 p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-3">
+              <p className="eyebrow">
+                <Bike size={13} strokeWidth={2.6} />
+                {t("active_bike")}
+              </p>
+              {activeVehicle && (
+                <Badge tone={status.tone} dot pulse={status.pulse}>
+                  {status.label}
+                </Badge>
+              )}
             </div>
 
             {activeVehicle ? (
-              <div className="pt-2 space-y-3">
-                <div className="flex items-center gap-4">
-                  {activeVehicle.photoUrl ? (
-                    <img
-                      src={activeVehicle.photoUrl}
-                      alt={activeVehicle.model}
-                      className="w-16 h-16 rounded-2xl object-cover border border-border"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-orange-500/10 border border-border flex items-center justify-center text-2xl">
-                      🏍️
-                    </div>
-                  )}
-                  <div>
-                    <h2 className="text-lg font-black text-foreground leading-tight">
-                      {activeVehicle.make} {activeVehicle.model}
-                    </h2>
-                    <p className="text-xs text-muted-foreground">
-                      {activeVehicle.year} · {activeVehicle.engineDisplacement || "—"} cc
-                    </p>
-                  </div>
+              <>
+                <div>
+                  <h2 className="font-display text-2xl font-black uppercase leading-none tracking-tight sm:text-3xl">
+                    {activeVehicle.make}{" "}
+                    <span className="text-primary text-glow">{activeVehicle.model}</span>
+                  </h2>
+                  <p className="num mt-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                    {activeVehicle.year} · {activeVehicle.engineDisplacement || "—"} cc
+                  </p>
                 </div>
 
-                <div className="p-3 bg-muted/40 border border-border/60 rounded-2xl flex justify-between items-center">
-                  <span className="text-[10px] text-muted-foreground uppercase font-black tracking-wider">
-                    {lang === "uk" ? "Поточний пробіг" : lang === "ru" ? "Текущий пробег" : "Odometer"}
-                  </span>
-                  <span className="text-lg font-black text-primary">
-                    {currentOdometer.toLocaleString()} km
-                  </span>
+                <div className="flex items-end justify-between gap-4 border-t pt-5 [border-color:hsl(var(--hairline))]">
+                  <div>
+                    <p className="label-micro flex items-center gap-1.5">
+                      <Gauge size={12} strokeWidth={2.6} />
+                      {t("current_odometer")}
+                    </p>
+                    <p className="num mt-1 text-4xl font-black leading-none text-primary text-glow sm:text-5xl">
+                      {currentOdometer.toLocaleString()}
+                      <span className="ml-1.5 text-base font-bold text-muted-foreground">km</span>
+                    </p>
+                  </div>
+
+                  <Link
+                    href={`/garage/${activeVehicle.id}`}
+                    className="btn-ghost h-11 px-5"
+                  >
+                    {t("garage")}
+                    <ArrowRight size={14} strokeWidth={2.6} />
+                  </Link>
                 </div>
-              </div>
+              </>
             ) : (
-              <div className="text-center py-6 text-xs text-muted-foreground border border-dashed border-border rounded-2xl">
-                {lang === "uk" ? "Байків немає в гаражі" : lang === "ru" ? "Байков нет в гараже" : "No vehicles in your garage."}
+              <div className="flex flex-col items-start gap-5 py-6">
+                <p className="text-sm text-muted-foreground">{t("no_vehicles_garage")}</p>
+                <Link href="/garage" className="btn-primary h-11 px-6">
+                  <Plus size={15} strokeWidth={3} />
+                  {t("add_vehicle")}
+                </Link>
+              </div>
+            )}
+          </div>
+        </Panel>
+
+        {/* ── Alerts ── */}
+        <Panel className="flex animate-rise-in flex-col justify-between lg:col-span-2">
+          <div>
+            <PanelTitle icon={<Bell size={13} strokeWidth={2.6} />}>{t("urgent_alerts")}</PanelTitle>
+
+            {urgentReminders.length > 0 ? (
+              <ul className="space-y-2">
+                {urgentReminders.map((r) => {
+                  const tone: Tone = r.urgency === "overdue" ? "rose" : "amber";
+                  return (
+                    <li
+                      key={r.id}
+                      className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2.5 ${
+                        tone === "rose"
+                          ? "border-signal-rose/25 bg-signal-rose/[0.06]"
+                          : "border-signal-amber/25 bg-signal-amber/[0.06]"
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold">{r.type}</p>
+                        <p className="truncate text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                          {r.vehicleName}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <Badge tone={tone}>
+                          {r.urgency === "overdue" ? t("urgent") : t("soon")}
+                        </Badge>
+                        {r.targetOdometer && (
+                          <p className="num mt-1 text-[10px] text-muted-foreground">
+                            {r.targetOdometer.toLocaleString()} km
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="rounded-md border border-signal-lime/25 bg-signal-lime/[0.06] px-4 py-8 text-center">
+                <p className="font-display text-sm font-bold uppercase tracking-wide text-signal-lime">
+                  {t("all_nominal")}
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{t("no_maint_alerts")}</p>
               </div>
             )}
           </div>
 
-          {activeVehicle ? (
-            <Link
-              href={`/garage/${activeVehicle.id}`}
-              className="w-full h-11 text-xs font-black uppercase tracking-wider rounded-xl bg-muted hover:bg-primary hover:text-primary-foreground border border-border flex items-center justify-center transition active:scale-95"
-            >
-              {lang === "uk" ? "До гаражу" : lang === "ru" ? "В гараж" : "Go to Garage"} →
-            </Link>
-          ) : (
-            <Link
-              href="/garage"
-              className="w-full h-11 text-xs font-black uppercase tracking-wider rounded-xl bg-primary text-primary-foreground flex items-center justify-center transition active:scale-95 shadow-md shadow-primary/20"
-            >
-              ➕ {lang === "uk" ? "Додати байк" : lang === "ru" ? "Добавить байк" : "Add Vehicle"}
-            </Link>
-          )}
-        </div>
-
-        {/* Smart Reminders / Urgent Alerts Widget */}
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between space-y-4">
-          <div className="space-y-3 w-full">
-            <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-              🔔 {lang === "uk" ? "Smart-Нагадування" : lang === "ru" ? "Smart-Напоминания" : "Urgent Alerts"}
-            </h3>
-
-            <div className="space-y-2 pt-2">
-              {urgentReminders.length > 0 ? (
-                urgentReminders.map((r) => (
-                  <div
-                    key={r.id}
-                    className={`p-3 rounded-2xl border flex items-center justify-between transition ${
-                      r.urgency === "overdue"
-                        ? "bg-red-500/5 border-red-500/20"
-                        : r.urgency === "soon"
-                        ? "bg-amber-500/5 border-amber-500/20"
-                        : "bg-muted/40 border-border/60"
-                    }`}
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${
-                          r.urgency === "overdue" ? "bg-red-500" : r.urgency === "soon" ? "bg-amber-500" : "bg-muted-foreground"
-                        }`} />
-                        <span className="text-xs font-extrabold text-foreground truncate block max-w-[150px]">
-                          {r.type}
-                        </span>
-                      </div>
-                      <span className="text-[9px] text-muted-foreground uppercase font-black tracking-wider mt-0.5 block truncate">
-                        {r.vehicleName}
-                      </span>
-                    </div>
-
-                    <div className="text-right flex-shrink-0">
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        r.urgency === "overdue"
-                          ? "bg-red-500/10 text-red-400"
-                          : r.urgency === "soon"
-                          ? "bg-amber-500/10 text-amber-400"
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        {r.urgency === "overdue"
-                          ? (lang === "uk" ? "Терміново" : lang === "ru" ? "Срочно" : "Urgent")
-                          : (lang === "uk" ? "Наближається" : lang === "ru" ? "Подходит" : "Soon")}
-                      </span>
-                      <p className="text-[10px] text-muted-foreground font-semibold mt-1">
-                        {r.targetOdometer ? `${r.targetOdometer.toLocaleString()} km` : ""}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center text-center p-6 bg-green-500/5 border border-green-500/20 rounded-2xl">
-                  <span className="text-2xl mb-1">✅</span>
-                  <p className="text-xs font-black text-green-400 uppercase tracking-wider">
-                    {lang === "uk" ? "Всі системи в нормі" : lang === "ru" ? "Все системы в норме" : "All systems nominal"}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {lang === "uk" ? "Немає запланованих робіт" : lang === "ru" ? "Нет запланированных работ" : "No maintenance alerts."}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <Link
-            href="/garage"
-            className="w-full h-11 text-xs font-black uppercase tracking-wider rounded-xl bg-muted hover:bg-primary hover:text-primary-foreground border border-border flex items-center justify-center transition active:scale-95"
-          >
-            {lang === "uk" ? "Переглянути все" : lang === "ru" ? "Посмотреть все" : "View All"} →
+          <Link href="/garage" className="btn-ghost mt-5 h-11 w-full">
+            {t("view_all")}
+            <ArrowRight size={14} strokeWidth={2.6} />
           </Link>
-        </div>
+        </Panel>
       </div>
-    </div>
+    </PageShell>
   );
 }

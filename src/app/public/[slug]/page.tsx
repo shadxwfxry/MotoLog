@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { Fuel, Wrench } from "lucide-react";
 import { vehicleRepository } from "@/server/repositories/vehicleRepository";
 import { formatDate } from "@/shared/lib/format";
+import { Badge, EmptyState, Panel, PanelTitle, PageShell } from "@/shared/ui";
 
 const PUBLIC_LOG_LIMIT = 10;
 
@@ -26,39 +28,72 @@ export default async function PublicVehiclePage({ params }: { params: { slug: st
   if (!vehicle) notFound();
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
-      <h1 className="text-4xl font-bold mb-2">
-        {vehicle.make} {vehicle.model}
-      </h1>
-      <p className="text-xl text-muted-foreground mb-8">Year: {vehicle.year}</p>
+    <PageShell width="md">
+      {/* This is the page strangers see when a link is shared, so it leads with
+          the machine rather than with a list of rows. */}
+      <header className="space-y-4 text-center">
+        <p className="eyebrow justify-center">Public log</p>
+        <h1 className="font-display text-4xl font-black uppercase leading-none tracking-tight sm:text-5xl">
+          {vehicle.make} <span className="text-primary text-glow">{vehicle.model}</span>
+        </h1>
+        <div className="flex justify-center">
+          <Badge tone="cyan">{vehicle.year}</Badge>
+        </div>
+      </header>
 
-      <h2 className="text-2xl font-semibold mb-4">Recent Maintenance</h2>
-      <ul className="mb-8 space-y-4">
-        {vehicle.maintenanceLogs.map((log) => (
-          <li key={log.id} className="border p-4 rounded-lg bg-card">
-            <p className="font-medium">{log.type}</p>
-            <p suppressHydrationWarning className="text-sm text-muted-foreground">
-              {formatDate(log.date)} at {log.odometer} km
-            </p>
-          </li>
-        ))}
-        {vehicle.maintenanceLogs.length === 0 && <p>No maintenance logs.</p>}
-      </ul>
+      <Panel corners>
+        <PanelTitle icon={<Wrench size={13} strokeWidth={2.6} />}>Recent maintenance</PanelTitle>
 
-      <h2 className="text-2xl font-semibold mb-4">Recent Refuels</h2>
-      <ul className="space-y-4">
-        {vehicle.refuelingLogs.map((log) => (
-          <li key={log.id} className="border p-4 rounded-lg bg-card">
-            <p className="font-medium">
-              {log.liters} L — {log.cost}
-            </p>
-            <p suppressHydrationWarning className="text-sm text-muted-foreground">
-              {formatDate(log.date)} at {log.odometer} km
-            </p>
-          </li>
-        ))}
-        {vehicle.refuelingLogs.length === 0 && <p>No refueling logs.</p>}
-      </ul>
-    </div>
+        {vehicle.maintenanceLogs.length > 0 ? (
+          <ul className="divide-y [&>li]:border-[hsl(var(--hairline))] [&>li]:py-3 first:[&>li]:pt-0 last:[&>li]:pb-0">
+            {vehicle.maintenanceLogs.map((log) => (
+              <li key={log.id} className="flex items-center justify-between gap-3">
+                <span className="truncate text-sm font-semibold">{log.type}</span>
+                <span
+                  suppressHydrationWarning
+                  className="num shrink-0 text-[11px] text-muted-foreground"
+                >
+                  {formatDate(log.date)} · {log.odometer.toLocaleString()} km
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="py-4 text-center text-sm text-muted-foreground">No maintenance logs.</p>
+        )}
+      </Panel>
+
+      <Panel>
+        <PanelTitle icon={<Fuel size={13} strokeWidth={2.6} />}>Recent refuels</PanelTitle>
+
+        {vehicle.refuelingLogs.length > 0 ? (
+          <ul className="divide-y [&>li]:border-[hsl(var(--hairline))] [&>li]:py-3 first:[&>li]:pt-0 last:[&>li]:pb-0">
+            {vehicle.refuelingLogs.map((log) => (
+              <li key={log.id} className="flex items-center justify-between gap-3">
+                <span className="num text-sm font-semibold">
+                  {log.liters} L
+                  <span className="ml-2 text-primary">{log.cost}</span>
+                </span>
+                <span
+                  suppressHydrationWarning
+                  className="num shrink-0 text-[11px] text-muted-foreground"
+                >
+                  {formatDate(log.date)} · {log.odometer.toLocaleString()} km
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="py-4 text-center text-sm text-muted-foreground">No refueling logs.</p>
+        )}
+      </Panel>
+
+      {vehicle.maintenanceLogs.length === 0 && vehicle.refuelingLogs.length === 0 && (
+        <EmptyState
+          title="Nothing published yet"
+          description="The owner has not made any log entries public."
+        />
+      )}
+    </PageShell>
   );
 }

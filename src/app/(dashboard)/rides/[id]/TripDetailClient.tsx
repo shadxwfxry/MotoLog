@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import dynamicImport from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Activity, ChevronLeft, Compass, Trash2 } from "lucide-react";
 import { decodePolyline } from "@/features/trips/polyline";
 import { deleteTrip } from "@/features/trips/actions";
 import type { GeoFix } from "@/features/trips/geo";
@@ -15,10 +16,11 @@ import {
   formatSpeed,
   type FormatPrefs,
 } from "@/shared/lib/format";
+import { Panel, PanelTitle, PageShell, StatTile } from "@/shared/ui";
 
 const RouteMap = dynamicImport(() => import("@/features/trips/components/RouteMap"), {
   ssr: false,
-  loading: () => <div className="h-full w-full bg-muted animate-pulse" />,
+  loading: () => <div className="h-full w-full animate-pulse bg-muted" />,
 });
 
 interface Trip {
@@ -73,129 +75,132 @@ export function TripDetailClient({ trip, prefs }: { trip: Trip; prefs: FormatPre
   };
 
   return (
-    <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6 pb-24">
-      <div className="flex items-center gap-3">
-        <Link href="/rides" className="p-2 rounded-xl bg-muted hover:bg-muted/80 transition">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="m15 18-6-6 6-6" />
-          </svg>
+    <PageShell>
+      <div className="space-y-5">
+        <Link
+          href="/rides"
+          className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary"
+        >
+          <ChevronLeft size={14} strokeWidth={2.8} />
+          Rides
         </Link>
+
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight truncate">
+          <h1 className="truncate font-display text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">
             {trip.title || "Ride"}
           </h1>
-          <p suppressHydrationWarning className="text-xs text-muted-foreground">
+          <p
+            suppressHydrationWarning
+            className="num mt-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground"
+          >
             {trip.vehicleName} · {formatDate(trip.startedAt, prefs)}
           </p>
         </div>
       </div>
 
       {error && (
-        <p className="text-xs font-semibold text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2">
+        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs font-semibold text-destructive">
           {error}
         </p>
       )}
 
       {track.length >= 2 && (
-        <div className="h-72 sm:h-96 rounded-2xl overflow-hidden border border-border">
-          <RouteMap track={track} />
-        </div>
+        <Panel padding="none" className="overflow-hidden">
+          <div className="h-72 w-full sm:h-[26rem]">
+            <RouteMap track={track} />
+          </div>
+        </Panel>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Metric label="Distance" value={formatDistance(trip.distanceM / 1000, prefs, 1)} accent />
-        <Metric label="Duration" value={formatDuration(trip.durationS)} />
-        <Metric label="Avg speed" value={formatSpeed(trip.avgSpeedKph, prefs)} />
-        <Metric label="Top speed" value={formatSpeed(trip.maxSpeedKph, prefs)} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+        <StatTile
+          tone="primary"
+          label="Distance"
+          value={formatDistance(trip.distanceM / 1000, prefs, 1)}
+        />
+        <StatTile label="Duration" value={formatDuration(trip.durationS)} />
+        <StatTile tone="cyan" label="Avg speed" value={formatSpeed(trip.avgSpeedKph, prefs)} />
+        <StatTile tone="lime" label="Top speed" value={formatSpeed(trip.maxSpeedKph, prefs)} />
       </div>
 
       {/* Lean is shown only when the recording device actually reported it. */}
       {trip.maxLeanAngleDeg !== null && (
-        <div className="rounded-2xl border border-border bg-card p-5 flex items-center justify-between">
-          <span className="text-sm font-semibold text-muted-foreground">Max lean angle</span>
-          <span className="text-2xl font-black text-primary">
+        <Panel className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-2.5 text-sm font-semibold text-muted-foreground">
+            <Compass size={16} strokeWidth={2.4} className="text-signal-violet" />
+            Max lean angle
+          </span>
+          <span className="num text-3xl font-black text-signal-violet">
             {Math.round(trip.maxLeanAngleDeg)}°
           </span>
-        </div>
+        </Panel>
       )}
 
       {speedSeries.length > 1 && (
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="text-sm font-semibold mb-4 uppercase tracking-wider text-muted-foreground">
-            📈 Speed
-          </h2>
-          <div className="h-56">
+        <Panel>
+          <PanelTitle icon={<Activity size={13} strokeWidth={2.6} />}>Speed profile</PanelTitle>
+
+          {/* `text-primary` + `currentColor` below is deliberate: recharts writes
+              these straight onto SVG attributes, where `var(--primary)` would
+              not resolve. Inheriting the colour keeps the chart on whatever
+              accent the user has chosen. */}
+          <div className="h-56 text-primary">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={speedSeries}>
+              <AreaChart data={speedSeries} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="speedFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#f97316" stopOpacity={0.6} />
-                    <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
+                    <stop offset="0%" stopColor="currentColor" stopOpacity={0.55} />
+                    <stop offset="100%" stopColor="currentColor" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
                   dataKey="t"
                   tickFormatter={(v: number) => formatDuration(v)}
-                  stroke="currentColor"
+                  stroke="hsl(215 18% 65%)"
                   fontSize={10}
                   tickLine={false}
+                  axisLine={false}
                 />
-                <YAxis stroke="currentColor" fontSize={10} tickLine={false} width={34} />
+                <YAxis
+                  stroke="hsl(215 18% 65%)"
+                  fontSize={10}
+                  tickLine={false}
+                  axisLine={false}
+                  width={34}
+                />
                 <Tooltip
                   formatter={(value: number) => formatSpeed(value, prefs)}
                   labelFormatter={(v: number) => formatDuration(v)}
+                  cursor={{ stroke: "currentColor", strokeOpacity: 0.4 }}
                   contentStyle={{
-                    background: "hsl(var(--card))",
+                    background: "hsl(var(--popover))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "0.75rem",
                     fontSize: "0.75rem",
+                    boxShadow: "0 20px 40px -20px rgb(0 0 0 / 0.8)",
                   }}
                 />
                 <Area
                   type="monotone"
                   dataKey="speed"
-                  stroke="#f97316"
+                  stroke="currentColor"
                   strokeWidth={2}
                   fill="url(#speedFill)"
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </Panel>
       )}
 
       <button
         onClick={handleDelete}
         disabled={deleting}
-        className="w-full py-3 rounded-xl text-xs font-bold uppercase tracking-widest bg-red-500/10 text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
+        className="btn h-12 w-full border border-destructive/25 bg-destructive/10 text-destructive transition-colors hover:bg-destructive/20"
       >
-        {deleting ? "Deleting…" : "🗑 Delete ride"}
+        <Trash2 size={15} strokeWidth={2.4} />
+        {deleting ? "Deleting…" : "Delete ride"}
       </button>
-    </div>
-  );
-}
-
-function Metric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div
-      className={`rounded-2xl border p-5 text-center ${
-        accent ? "border-primary/30 bg-primary/10" : "border-border bg-card"
-      }`}
-    >
-      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">
-        {label}
-      </p>
-      <p className={`text-xl font-black ${accent ? "text-primary" : ""}`}>{value}</p>
-    </div>
+    </PageShell>
   );
 }

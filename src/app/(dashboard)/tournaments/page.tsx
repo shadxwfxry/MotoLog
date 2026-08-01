@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { Eye, Settings2, Trophy } from "lucide-react";
 import { getOptionalAuthUser } from "@/server/auth/guards";
+import { Badge, Panel } from "@/shared/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +17,7 @@ export default async function TournamentsPage({ searchParams }: PageProps) {
   const isAdminMode = resolvedParams?.mode === "admin";
 
   const bracketUrl = process.env.NEXT_PUBLIC_BRACKET_URL || "https://motobracket.com";
-  
+
   // Format the target URL safely
   let finalUrl = bracketUrl;
   if (isAdminMode) {
@@ -24,34 +26,54 @@ export default async function TournamentsPage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="w-full flex flex-col h-[calc(100dvh-57px-73px)] overflow-hidden bg-background">
-      {/* Premium Toggle Bar */}
-      <div className="w-full bg-card/60 backdrop-blur-md border-b border-border px-4 py-3 flex items-center justify-between gap-4 h-[56px] shadow-sm flex-shrink-0">
-        <span className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          🏆 {isAdminMode ? "Режим Организатора" : "Режим Зрителя"}
-        </span>
+    <div className="mx-auto w-full max-w-screen-lg space-y-4 px-4 py-8 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary">
+            <Trophy size={18} strokeWidth={2.4} />
+          </span>
+          <div>
+            <h1 className="font-display text-xl font-black uppercase leading-none tracking-tight">
+              Tournaments
+            </h1>
+            <div className="mt-1.5">
+              <Badge tone={isAdminMode ? "amber" : "cyan"} dot>
+                {isAdminMode ? "Organiser mode" : "Spectator mode"}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
         <a
           href={isAdminMode ? "/tournaments" : "/tournaments?mode=admin"}
-          className={`px-4 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-sm flex items-center gap-1.5 ${
-            isAdminMode
-              ? "bg-amber-500 hover:bg-amber-600 text-black font-extrabold"
-              : "bg-primary hover:bg-primary/80 text-primary-foreground font-extrabold"
-          }`}
+          className="btn-ghost h-11 px-5"
         >
-          {isAdminMode ? "👁️ Режим зрителя" : "⚙️ Режим организатора"}
+          {isAdminMode ? (
+            <>
+              <Eye size={15} strokeWidth={2.6} />
+              Spectator
+            </>
+          ) : (
+            <>
+              <Settings2 size={15} strokeWidth={2.6} />
+              Organiser
+            </>
+          )}
         </a>
       </div>
 
-      {/* Frame Container */}
-      <div className="flex-1 w-full relative overflow-hidden bg-background">
+      {/* The bracket app is an external site, so the frame is treated as a
+          panel of its own rather than bled to the window edges — that way the
+          page still reads as part of MotoLog. */}
+      <Panel padding="none" corners className="overflow-hidden">
         <iframe
           src={finalUrl}
-          className="w-full h-full absolute inset-0 border-0 m-0 p-0 bg-background"
+          className="h-[70vh] min-h-[520px] w-full border-0 bg-background"
           title="Tournaments"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
         />
-      </div>
+      </Panel>
     </div>
   );
 }

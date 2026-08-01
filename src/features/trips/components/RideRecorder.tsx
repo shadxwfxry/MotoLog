@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { Bike, Pause, Play, Square, Trash2, AlertTriangle } from "lucide-react";
 import { useRideStore } from "@/store/rideStore";
 import { useActiveVehicleStore } from "@/store/activeVehicleStore";
 import { useGeoTracker } from "../hooks/useGeoTracker";
@@ -17,11 +18,12 @@ import {
   formatSpeed,
   type FormatPrefs,
 } from "@/shared/lib/format";
+import { Badge, EmptyState, Panel } from "@/shared/ui";
 
 // MapLibre touches `window` at import time, so it must never run on the server.
 const RouteMap = dynamic(() => import("./RouteMap"), {
   ssr: false,
-  loading: () => <div className="h-full w-full bg-muted animate-pulse rounded-2xl" />,
+  loading: () => <div className="h-full w-full animate-pulse bg-muted" />,
 });
 
 interface VehicleOption {
@@ -127,51 +129,72 @@ export function RideRecorder({ vehicles, prefs }: Props) {
 
   if (vehicles.length === 0) {
     return (
-      <div className="text-center py-16 rounded-3xl border-2 border-dashed border-border/50">
-        <div className="text-5xl mb-4 opacity-20">🏍️</div>
-        <p className="text-sm text-muted-foreground">Add a vehicle before recording a ride.</p>
-      </div>
+      <EmptyState
+        icon={<Bike size={44} strokeWidth={1.5} />}
+        title="No bike to ride"
+        description="Add a vehicle to your garage before recording a ride."
+      />
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* ── Live map ── */}
-      <div className="h-64 sm:h-80 rounded-2xl overflow-hidden border border-border">
-        <RouteMap
-          track={fixes}
-          markers={
-            fixes.length > 0
-              ? [
-                  {
-                    id: "self",
-                    lat: fixes[fixes.length - 1].lat,
-                    lon: fixes[fixes.length - 1].lon,
-                    label: "You",
-                    sublabel: formatSpeed(currentSpeed, prefs),
-                    isSelf: true,
-                  },
-                ]
-              : []
-          }
-          followMarkerId={recording ? "self" : null}
-        />
-      </div>
+      {/* ── Live map with the readouts laid over it, cockpit-style ── */}
+      {/* No HUD brackets here: they land on top of MapLibre's own controls and
+          attribution, which have to stay legible. */}
+      <Panel padding="none" className="overflow-hidden">
+        <div className="relative h-72 w-full sm:h-96">
+          <RouteMap
+            track={fixes}
+            markers={
+              fixes.length > 0
+                ? [
+                    {
+                      id: "self",
+                      lat: fixes[fixes.length - 1].lat,
+                      lon: fixes[fixes.length - 1].lon,
+                      label: "You",
+                      sublabel: formatSpeed(currentSpeed, prefs),
+                      isSelf: true,
+                    },
+                  ]
+                : []
+            }
+            followMarkerId={recording ? "self" : null}
+          />
 
-      {geoError && (
-        <p className="text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2">
-          {geoError}
-        </p>
-      )}
-      {saveError && (
-        <p className="text-xs font-semibold text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2">
-          {saveError}
-        </p>
-      )}
+          {/* Recording state, top-left, always visible over the map. */}
+          <div className="pointer-events-none absolute left-4 top-4">
+            {status === "idle" ? (
+              <Badge tone="default" className="glass">
+                Standby
+              </Badge>
+            ) : (
+              <Badge tone={recording ? "rose" : "amber"} dot pulse={recording} className="glass">
+                {recording ? "Recording" : "Paused"}
+              </Badge>
+            )}
+          </div>
 
-      {/* ── Live figures ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Metric label="Speed" value={formatSpeed(currentSpeed, prefs)} big />
+          {/* The speed readout floats over the map so the rider's eye has one
+              place to go — the number is the point of this screen. */}
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-card via-card/80 to-transparent p-5 pt-14">
+            <p className="label-micro">Speed</p>
+            <p className="num text-6xl font-black leading-none text-primary text-glow sm:text-7xl">
+              {Math.round(currentSpeed)}
+              <span className="ml-2 text-lg font-bold text-muted-foreground">
+                {prefs.unitSystem === "imperial" ? "mph" : "km/h"}
+              </span>
+            </p>
+          </div>
+        </div>
+      </Panel>
+
+      {geoError && <Notice tone="amber">{geoError}</Notice>}
+      {saveError && <Notice tone="rose">{saveError}</Notice>}
+
+      {/* ── Secondary figures ── */}
+      <div className="grid grid-cols-3 gap-3">
         <Metric label="Distance" value={formatDistance(stats.distanceM / 1000, prefs, 1)} />
         <Metric label="Time" value={formatDuration(stats.durationS)} />
         {/* Hidden entirely when the device has no orientation sensor, rather
@@ -179,20 +202,21 @@ export function RideRecorder({ vehicles, prefs }: Props) {
         {lean.supported ? (
           <Metric label="Lean" value={`${Math.round(lean.angleDeg ?? 0)}°`} />
         ) : (
-          <Metric label="Top speed" value={formatSpeed(stats.maxSpeedKph, prefs)} />
+          <Metric label="Top" value={formatSpeed(stats.maxSpeedKph, prefs)} />
         )}
       </div>
 
       {/* ── Controls ── */}
       {status === "idle" ? (
         <div className="space-y-3">
-          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground block">
+          <label className="label-micro block" htmlFor="ride-vehicle">
             Vehicle
           </label>
           <select
+            id="ride-vehicle"
             value={vehicleId ?? ""}
             onChange={(e) => setVehicleId(e.target.value)}
-            className="w-full bg-muted border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary"
+            className="field cursor-pointer appearance-none"
           >
             {vehicles.map((v) => (
               <option key={v.id} value={v.id}>
@@ -204,30 +228,38 @@ export function RideRecorder({ vehicles, prefs }: Props) {
           <button
             onClick={handleStart}
             disabled={!vehicleId}
-            className="w-full h-16 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-lg shadow-lg shadow-primary/20 active:scale-95 transition disabled:opacity-50"
+            className="btn-primary h-16 w-full animate-pulse-ring text-base"
           >
-            ▶ Start ride
+            <Play size={20} strokeWidth={3} fill="currentColor" />
+            Start ride
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={recording ? pause : resume}
-            className="h-16 rounded-2xl bg-muted border border-border font-black uppercase tracking-widest active:scale-95 transition"
-          >
-            {recording ? "⏸ Pause" : "▶ Resume"}
+          <button onClick={recording ? pause : resume} className="btn-ghost h-16 text-sm">
+            {recording ? (
+              <>
+                <Pause size={18} strokeWidth={3} fill="currentColor" />
+                Pause
+              </>
+            ) : (
+              <>
+                <Play size={18} strokeWidth={3} fill="currentColor" />
+                Resume
+              </>
+            )}
           </button>
-          <button
-            onClick={handleFinish}
-            disabled={saving}
-            className="h-16 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "⏹ Finish"}
+
+          <button onClick={handleFinish} disabled={saving} className="btn-primary h-16 text-sm">
+            <Square size={16} strokeWidth={3} fill="currentColor" />
+            {saving ? "Saving…" : "Finish"}
           </button>
+
           <button
             onClick={handleDiscard}
-            className="col-span-2 h-11 rounded-xl text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-destructive transition"
+            className="btn col-span-2 h-11 text-muted-foreground hover:text-destructive"
           >
+            <Trash2 size={14} strokeWidth={2.4} />
             Discard ride
           </button>
         </div>
@@ -236,13 +268,26 @@ export function RideRecorder({ vehicles, prefs }: Props) {
   );
 }
 
-function Metric({ label, value, big }: { label: string; value: string; big?: boolean }) {
+function Notice({ tone, children }: { tone: "amber" | "rose"; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 text-center">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">
-        {label}
-      </p>
-      <p className={`font-black ${big ? "text-3xl text-primary" : "text-xl"}`}>{value}</p>
-    </div>
+    <p
+      className={`flex items-start gap-2 rounded-md border px-3 py-2.5 text-xs font-semibold ${
+        tone === "amber"
+          ? "border-signal-amber/30 bg-signal-amber/10 text-signal-amber"
+          : "border-destructive/30 bg-destructive/10 text-destructive"
+      }`}
+    >
+      <AlertTriangle size={14} strokeWidth={2.6} className="mt-px shrink-0" />
+      {children}
+    </p>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <Panel padding="none" className="p-4 text-center">
+      <p className="label-micro">{label}</p>
+      <p className="num mt-1 text-xl font-black">{value}</p>
+    </Panel>
   );
 }

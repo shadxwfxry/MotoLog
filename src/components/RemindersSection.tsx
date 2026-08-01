@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Bell, Check, Plus, RotateCw, X } from "lucide-react";
 import {
   addPlannedMaintenance,
   completePlannedMaintenance,
@@ -9,6 +10,8 @@ import {
 import { URGENCY_HORIZON, calcUrgency, type Urgency } from "@/features/maintenance/reminders";
 import { useLanguage } from "./LanguageProvider";
 import { formatDate } from "@/shared/lib/format";
+import { FormField, PanelTitle } from "@/shared/ui";
+import { cn } from "@/lib/utils";
 
 type Reminder = {
   id: string;
@@ -21,7 +24,21 @@ type Reminder = {
   description: string | null;
 };
 
-const REMINDER_PRESETS = ["Oil Change", "Chain Lube", "Air Filter", "Tire Pressure", "Brake Fluid", "Coolant", "General Inspection"];
+const REMINDER_PRESETS = [
+  "Oil Change",
+  "Chain Lube",
+  "Air Filter",
+  "Tire Pressure",
+  "Brake Fluid",
+  "Coolant",
+  "General Inspection",
+];
+
+const URGENCY_STYLE: Record<Urgency, string> = {
+  overdue: "border-destructive/35 bg-destructive/[0.07]",
+  soon: "border-signal-amber/35 bg-signal-amber/[0.07]",
+  ok: "border-[hsl(var(--hairline))] bg-foreground/[0.03]",
+};
 
 export function RemindersSection({
   vehicleId,
@@ -80,12 +97,6 @@ export function RemindersSection({
   const urgency = (r: Reminder): Urgency =>
     calcUrgency(r, currentOdometer, URGENCY_HORIZON.detail);
 
-  const urgencyStyle: Record<Urgency, string> = {
-    overdue: "border-red-500 bg-red-500/10 text-red-400",
-    soon: "border-yellow-500 bg-yellow-500/10 text-yellow-400",
-    ok: "border-border bg-muted/20",
-  };
-
   const catLabel: Record<string, string> = {
     consumable: t("maint_consumable"),
     service: t("maint_service"),
@@ -93,68 +104,107 @@ export function RemindersSection({
   };
 
   return (
-    <div className="mt-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          🔔 {t("reminders")}
-        </h4>
-        <button
-          onClick={() => setOpen(!open)}
-          className="text-xs px-3 py-1.5 rounded-xl border border-dashed border-border text-muted-foreground hover:border-yellow-400 hover:text-yellow-400 transition-colors"
-        >
-          + {t("add_reminder")}
-        </button>
-      </div>
+    <div>
+      <PanelTitle
+        icon={<Bell size={13} strokeWidth={2.6} />}
+        action={
+          <button
+            onClick={() => setOpen(!open)}
+            className="btn h-8 border border-dashed px-3 text-muted-foreground hover:border-primary/50 hover:text-primary [border-color:hsl(var(--hairline))]"
+          >
+            <Plus size={12} strokeWidth={3} />
+            {t("add_reminder")}
+          </button>
+        }
+      >
+        {t("reminders")}
+      </PanelTitle>
 
       {error && (
-        <p className="text-xs font-semibold text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2">
+        <p className="mb-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs font-semibold text-destructive">
           {error}
         </p>
       )}
 
-      {/* Active reminders */}
       {active.length > 0 && (
         <ul className="space-y-2">
-          {active.map(r => {
+          {active.map((r) => {
             const u = urgency(r);
+            const remaining =
+              r.targetOdometer != null && currentOdometer > 0
+                ? Math.abs(r.targetOdometer - currentOdometer)
+                : null;
+
             return (
-              <li key={r.id} className={`rounded-xl border p-3 ${urgencyStyle[u]}`}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{r.type}</p>
-                    <p className="text-xs opacity-70">{catLabel[r.category] ?? r.category}</p>
-                    {r.targetOdometer && (
-                      <p className="text-xs mt-0.5">
-                        🛣 {r.targetOdometer.toLocaleString()} km
-                        {currentOdometer > 0 && (
-                          <span className="ml-1 opacity-70">
-                            ({Math.abs(r.targetOdometer - currentOdometer).toLocaleString()} km {r.targetOdometer > currentOdometer ? "left" : "overdue"})
-                          </span>
+              <li key={r.id} className={cn("rounded-md border p-3.5", URGENCY_STYLE[u])}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "h-2 w-2 shrink-0 rounded-full",
+                          u === "overdue"
+                            ? "bg-destructive"
+                            : u === "soon"
+                              ? "bg-signal-amber"
+                              : "bg-muted-foreground",
                         )}
-                      </p>
-                    )}
-                    {r.targetDate && (
-                      <p suppressHydrationWarning className="text-xs mt-0.5">📅 {formatDate(r.targetDate)}</p>
-                    )}
-                    {r.intervalKm && (
-                      <p className="text-xs mt-0.5 opacity-70">↻ every {r.intervalKm.toLocaleString()} km</p>
-                    )}
-                    {r.description && <p className="text-xs mt-1 opacity-70">{r.description}</p>}
+                      />
+                      <p className="truncate text-sm font-bold">{r.type}</p>
+                    </div>
+
+                    <p className="mt-0.5 pl-4 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      {catLabel[r.category] ?? r.category}
+                    </p>
+
+                    <div className="mt-2 space-y-1 pl-4">
+                      {r.targetOdometer != null && (
+                        <p className="num text-[11px] text-muted-foreground">
+                          {r.targetOdometer.toLocaleString()} km
+                          {remaining !== null && (
+                            <span className="ml-1.5 opacity-70">
+                              ({remaining.toLocaleString()} km{" "}
+                              {r.targetOdometer > currentOdometer ? "left" : "overdue"})
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      {r.targetDate && (
+                        <p
+                          suppressHydrationWarning
+                          className="num text-[11px] text-muted-foreground"
+                        >
+                          {formatDate(r.targetDate)}
+                        </p>
+                      )}
+                      {r.intervalKm && (
+                        <p className="num flex items-center gap-1 text-[11px] text-muted-foreground opacity-70">
+                          <RotateCw size={10} strokeWidth={2.6} />
+                          every {r.intervalKm.toLocaleString()} km
+                        </p>
+                      )}
+                      {r.description && (
+                        <p className="text-[11px] text-muted-foreground opacity-80">
+                          {r.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-1">
+
+                  <div className="flex shrink-0 gap-1">
                     <button
                       onClick={() => handleComplete(r.id)}
-                      className="px-2 py-1 text-xs rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/40 transition-colors"
-                      title="Mark done"
+                      title={t("mark_done")}
+                      className="flex h-8 w-8 items-center justify-center rounded-md bg-signal-lime/15 text-signal-lime transition-colors hover:bg-signal-lime/30"
                     >
-                      ✓
+                      <Check size={14} strokeWidth={3} />
                     </button>
                     <button
                       onClick={() => handleDelete(r.id)}
-                      className="px-2 py-1 text-xs rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40 transition-colors"
-                      title="Delete"
+                      title={t("delete")}
+                      className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/15 text-destructive transition-colors hover:bg-destructive/30"
                     >
-                      ✕
+                      <X size={14} strokeWidth={3} />
                     </button>
                   </div>
                 </div>
@@ -165,69 +215,101 @@ export function RemindersSection({
       )}
 
       {active.length === 0 && !open && (
-        <p className="text-xs text-muted-foreground">{t("no_reminders")}</p>
+        <p className="py-2 text-xs text-muted-foreground">{t("no_reminders")}</p>
       )}
 
-      {/* Completed (collapsed) */}
       {done.length > 0 && (
-        <p className="text-xs text-muted-foreground opacity-50">{done.length} completed reminder(s)</p>
+        <p className="num mt-3 text-[11px] text-muted-foreground opacity-60">
+          {done.length} {t("completed")}
+        </p>
       )}
 
-      {/* Add form */}
+      {/* ── Add form ── */}
       {open && (
-        <form action={handleAdd as any} className="p-4 border border-border rounded-xl bg-muted/20 space-y-4">
-          <h5 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("add_reminder")}</h5>
-
-          {/* Category */}
-          <div className="flex rounded-xl overflow-hidden border border-border">
+        <form
+          action={handleAdd as any}
+          className="mt-3 space-y-4 rounded-md border bg-background/40 p-4 [border-color:hsl(var(--hairline))]"
+        >
+          <div className="flex rounded-md border p-1 [border-color:hsl(var(--hairline))]">
             {["consumable", "service", "reminder"].map((cat) => (
-              <button key={cat} type="button" onClick={() => setCategory(cat)}
-                className={`flex-1 py-2 text-xs font-semibold transition-colors ${category === cat ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                aria-pressed={category === cat}
+                className={cn(
+                  "flex-1 rounded-sm py-2 text-[10px] font-bold uppercase tracking-[0.14em] transition-all",
+                  category === cat
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
               >
                 {catLabel[cat]}
               </button>
             ))}
           </div>
 
-          {/* Presets */}
-          <div className="flex flex-wrap gap-2">
-            {REMINDER_PRESETS.map(p => (
-              <button key={p} type="button" onClick={() => setSelectedPreset(p === selectedPreset ? "" : p)}
-                className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${selectedPreset === p ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary hover:text-primary"}`}
+          <div className="flex flex-wrap gap-1.5">
+            {REMINDER_PRESETS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setSelectedPreset(p === selectedPreset ? "" : p)}
+                className={cn(
+                  "chip transition-all",
+                  selectedPreset === p
+                    ? "border-primary/50 bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:border-primary/40 hover:text-primary",
+                )}
               >
                 {p}
               </button>
             ))}
           </div>
 
-          {/* Custom name */}
-          <input type="text" value={customType} onChange={e => { setCustomType(e.target.value); setSelectedPreset(""); }}
+          <input
+            type="text"
+            value={customType}
+            onChange={(e) => {
+              setCustomType(e.target.value);
+              setSelectedPreset("");
+            }}
             placeholder={t("custom_type_placeholder")}
-            className="w-full p-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="field"
           />
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">{t("target_odometer")}</label>
-              <input name="targetOdometer" type="number" placeholder={t("optional")} className="p-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">{t("target_date")}</label>
-              <input name="targetDate" type="date" className="p-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
-            <div className="col-span-2 flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">{t("interval_km")}</label>
-              <input name="intervalKm" type="number" placeholder={t("optional")} className="p-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
-            <div className="col-span-2 flex flex-col gap-1">
-              <label className="text-xs text-muted-foreground">{t("description")}</label>
-              <input name="description" type="text" className="p-2 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label={t("target_odometer")}>
+              <input
+                name="targetOdometer"
+                type="number"
+                placeholder={t("optional")}
+                className="field num"
+              />
+            </FormField>
+            <FormField label={t("target_date")}>
+              <input name="targetDate" type="date" className="field num" />
+            </FormField>
+            <FormField label={t("interval_km")} className="col-span-2">
+              <input
+                name="intervalKm"
+                type="number"
+                placeholder={t("optional")}
+                className="field num"
+              />
+            </FormField>
+            <FormField label={t("description")} className="col-span-2">
+              <input name="description" type="text" className="field" />
+            </FormField>
           </div>
 
           <div className="flex gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="flex-1 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:bg-muted transition-colors">{t("cancel")}</button>
-            <button type="submit" className="flex-1 py-2 rounded-xl bg-yellow-500 text-black text-sm font-semibold hover:bg-yellow-400 transition-colors">{t("save")}</button>
+            <button type="button" onClick={() => setOpen(false)} className="btn-ghost h-11 flex-1">
+              {t("cancel")}
+            </button>
+            <button type="submit" className="btn-primary h-11 flex-1">
+              {t("save")}
+            </button>
           </div>
         </form>
       )}

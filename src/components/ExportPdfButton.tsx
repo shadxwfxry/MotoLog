@@ -2,6 +2,7 @@
 
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { FileDown } from "lucide-react";
 import { useLanguage } from "./LanguageProvider";
 
 interface ExportPdfButtonProps {
@@ -87,11 +88,9 @@ export function ExportPdfButton({ vehicle, refuels, maintenance, stats }: Export
   };
 
   return (
-    <button 
-      onClick={handleExport}
-      className="block w-full text-center py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition shadow-lg shadow-red-500/20 text-sm mt-4"
-    >
-      📄 {t("export_pdf")}
+    <button onClick={handleExport} className="btn-ghost h-11 w-full">
+      <FileDown size={15} strokeWidth={2.4} />
+      {t("export_pdf")}
     </button>
   );
 }

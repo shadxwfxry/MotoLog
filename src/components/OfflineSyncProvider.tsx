@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, Check, RefreshCw } from "lucide-react";
 import { useLanguage } from "./LanguageProvider";
 import { countFailed, drainSyncQueue } from "@/features/sync/syncQueue";
+import type { Tone } from "@/shared/ui";
+import { cn } from "@/lib/utils";
 
 /**
  * Drains the offline queue when connectivity returns and reports progress.
@@ -11,7 +14,7 @@ import { countFailed, drainSyncQueue } from "@/features/sync/syncQueue";
  * the banners and owns the lifecycle.
  */
 export function OfflineSyncProvider({ children }: { children: React.ReactNode }) {
-  const { lang } = useLanguage();
+  const { t } = useLanguage();
   const [syncing, setSyncing] = useState(false);
   const [syncedCount, setSyncedCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
@@ -43,61 +46,55 @@ export function OfflineSyncProvider({ children }: { children: React.ReactNode })
     <>
       {children}
 
-      {syncing && (
-        <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2.5 p-3.5 px-4 rounded-2xl border border-blue-500/20 bg-card/90 backdrop-blur-md shadow-lg shadow-blue-500/5 animate-pulse">
-          <svg
-            className="animate-spin h-4 w-4 text-blue-400"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            />
-          </svg>
-          <span className="text-xs font-black uppercase tracking-wider text-blue-400">
-            {lang === "uk"
-              ? "Синхронізація даних..."
-              : lang === "ru"
-              ? "Синхронизация данных..."
-              : "Syncing offline logs..."}
-          </span>
-        </div>
-      )}
+      {/* Sits above the floating dock, right-aligned, so it never covers the
+          navigation the way a bottom-centred toast would. */}
+      <div className="pointer-events-none fixed bottom-28 right-4 z-50 flex flex-col items-end gap-2">
+        {syncing && (
+          <Toast tone="cyan">
+            <RefreshCw size={14} strokeWidth={2.6} className="animate-spin" />
+            {t("syncing")}…
+          </Toast>
+        )}
 
-      {syncedCount > 0 && (
-        <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2.5 p-3.5 px-4 rounded-2xl border border-green-500/20 bg-card/90 backdrop-blur-md shadow-lg shadow-green-500/5 animate-bounce">
-          <span className="text-sm">✅</span>
-          <span className="text-xs font-black uppercase tracking-wider text-green-400">
-            {lang === "uk"
-              ? `Синхронізовано: ${syncedCount}`
-              : lang === "ru"
-              ? `Синхронизировано: ${syncedCount}`
-              : `Synced ${syncedCount} log${syncedCount === 1 ? "" : "s"}`}
-          </span>
-        </div>
-      )}
+        {syncedCount > 0 && (
+          <Toast tone="lime">
+            <Check size={14} strokeWidth={3} />
+            {t("synced")}: {syncedCount}
+          </Toast>
+        )}
 
-      {/*
-        Entries that exhausted their retries stay in the queue and are surfaced
-        here — previously a permanently failing item just logged to the console
-        on every reconnect and the user never learned their entry was lost.
-      */}
-      {!syncing && failedCount > 0 && (
-        <div className="fixed bottom-24 right-4 z-50 flex items-center gap-2.5 p-3.5 px-4 rounded-2xl border border-red-500/20 bg-card/90 backdrop-blur-md shadow-lg shadow-red-500/5">
-          <span className="text-sm">⚠️</span>
-          <span className="text-xs font-black uppercase tracking-wider text-red-400">
-            {lang === "uk"
-              ? `Не вдалося синхронізувати: ${failedCount}`
-              : lang === "ru"
-              ? `Не удалось синхронизировать: ${failedCount}`
-              : `${failedCount} entr${failedCount === 1 ? "y" : "ies"} failed to sync`}
-          </span>
-        </div>
-      )}
+        {/*
+          Entries that exhausted their retries stay in the queue and are surfaced
+          here — previously a permanently failing item just logged to the console
+          on every reconnect and the user never learned their entry was lost.
+        */}
+        {!syncing && failedCount > 0 && (
+          <Toast tone="rose">
+            <AlertTriangle size={14} strokeWidth={2.6} />
+            {t("sync_failed")}: {failedCount}
+          </Toast>
+        )}
+      </div>
     </>
+  );
+}
+
+function Toast({ tone, children }: { tone: Extract<Tone, "cyan" | "lime" | "rose">; children: React.ReactNode }) {
+  const style = {
+    cyan: "border-signal-cyan/30 text-signal-cyan",
+    lime: "border-signal-lime/30 text-signal-lime",
+    rose: "border-destructive/30 text-destructive",
+  }[tone];
+
+  return (
+    <div
+      className={cn(
+        "glass pointer-events-auto flex animate-rise-in items-center gap-2.5 rounded-md border px-4 py-3",
+        "text-[11px] font-bold uppercase tracking-[0.14em]",
+        style,
+      )}
+    >
+      {children}
+    </div>
   );
 }

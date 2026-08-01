@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dynamicImport from "next/dynamic";
+import { LogOut, MessageSquare, Radio, Send, Users } from "lucide-react";
 import { useGroupRide } from "@/features/multiplayer/useGroupRide";
 import {
   createRideGroup,
@@ -14,11 +15,13 @@ import type { ActionResult } from "@/server/actions/result";
 import { RIDE_STATUSES, type RideStatusCode } from "@/features/multiplayer/transport/types";
 import type { RiderMarker } from "@/features/trips/components/RouteMap";
 import { useRideStore } from "@/store/rideStore";
+import { Badge, EmptyState, Panel, PanelTitle, PageHeader, PageShell } from "@/shared/ui";
+import type { Tone } from "@/shared/ui";
 import { LeaderboardPanel } from "./LeaderboardPanel";
 
 const RouteMap = dynamicImport(() => import("@/features/trips/components/RouteMap"), {
   ssr: false,
-  loading: () => <div className="h-full w-full bg-muted animate-pulse" />,
+  loading: () => <div className="h-full w-full animate-pulse bg-muted" />,
 });
 
 const STATUS_LABEL: Record<RideStatusCode, string> = {
@@ -92,7 +95,8 @@ export function GroupRideClient({
         lat: latestFix.lat,
         lon: latestFix.lon,
         label: nickname,
-        sublabel: latestFix.speedMps != null ? `${Math.round(latestFix.speedMps * 3.6)} km/h` : undefined,
+        sublabel:
+          latestFix.speedMps != null ? `${Math.round(latestFix.speedMps * 3.6)} km/h` : undefined,
         isSelf: true,
       });
     }
@@ -163,92 +167,115 @@ export function GroupRideClient({
   }
 
   return (
-    <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-5 pb-24">
-      <h1 className="text-2xl font-bold tracking-tight uppercase">Group ride</h1>
+    <PageShell>
+      <PageHeader
+        eyebrow="Live"
+        title="Group ride"
+        action={group ? <ConnectionBadge state={ride.state} /> : undefined}
+      />
 
       {(error || ride.error) && (
-        <p className="text-xs font-semibold text-destructive bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2">
+        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-xs font-semibold text-destructive">
           {error ?? ride.error}
         </p>
       )}
 
       {!group ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card title="Start a ride">
-            <Field label="Your nickname" value={nickname} onChange={setNickname} />
-            <Field label="Ride name" value={rideName} onChange={setRideName} placeholder="Sunday loop" />
-            <button
-              onClick={handleCreate}
-              disabled={busy}
-              className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-black uppercase tracking-wider disabled:opacity-50"
-            >
-              Create
-            </button>
-          </Card>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Panel corners>
+            <PanelTitle icon={<Radio size={13} strokeWidth={2.6} />}>Start a ride</PanelTitle>
+            <div className="space-y-3">
+              <Field label="Your nickname" value={nickname} onChange={setNickname} />
+              <Field
+                label="Ride name"
+                value={rideName}
+                onChange={setRideName}
+                placeholder="Sunday loop"
+              />
+              <button onClick={handleCreate} disabled={busy} className="btn-primary h-12 w-full">
+                Create
+              </button>
+            </div>
+          </Panel>
 
-          <Card title="Join a ride">
-            <Field label="Your nickname" value={nickname} onChange={setNickname} />
-            <Field
-              label="Join code"
-              value={joinCode}
-              onChange={(v) => setJoinCode(v.toUpperCase())}
-              placeholder="ABC123"
-            />
-            <button
-              onClick={handleJoin}
-              disabled={busy || joinCode.length !== 6}
-              className="w-full h-12 rounded-xl bg-muted border border-border font-black uppercase tracking-wider disabled:opacity-50"
-            >
-              Join
-            </button>
-          </Card>
+          <Panel>
+            <PanelTitle icon={<Users size={13} strokeWidth={2.6} />}>Join a ride</PanelTitle>
+            <div className="space-y-3">
+              <Field label="Your nickname" value={nickname} onChange={setNickname} />
+              <Field
+                label="Join code"
+                value={joinCode}
+                onChange={(v) => setJoinCode(v.toUpperCase())}
+                placeholder="ABC123"
+                className="num text-center text-lg tracking-[0.4em]"
+              />
+              <button
+                onClick={handleJoin}
+                disabled={busy || joinCode.length !== 6}
+                className="btn-ghost h-12 w-full"
+              >
+                Join
+              </button>
+            </div>
+          </Panel>
         </div>
       ) : (
         <>
-          <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
+          {/* The join code is the one thing riders read aloud to each other, so
+              it gets the display treatment rather than sitting in a grey box. */}
+          <Panel corners sweep className="space-y-5">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="font-bold truncate">{group.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="truncate font-display text-lg font-black uppercase tracking-tight">
+                  {group.name}
+                </p>
+                <p className="num text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                   {ride.riders.length || group.members.length} riders
                 </p>
               </div>
-              <ConnectionBadge state={ride.state} />
             </div>
 
-            <div className="rounded-xl bg-muted/40 p-3 text-center">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
-                Join code
+            <div className="rounded-md border border-primary/25 bg-primary/[0.06] py-5 text-center">
+              <p className="label-micro">Join code</p>
+              <p className="num mt-1 text-4xl font-black tracking-[0.35em] text-primary text-glow sm:text-5xl">
+                {group.code}
               </p>
-              <p className="text-3xl font-black tracking-[0.3em] text-primary">{group.code}</p>
             </div>
-          </div>
+          </Panel>
 
-          <div className="h-72 rounded-2xl overflow-hidden border border-border">
-            <RouteMap markers={markers} />
-          </div>
+          <Panel padding="none" className="overflow-hidden">
+            <div className="h-72 w-full sm:h-80">
+              <RouteMap markers={markers} />
+            </div>
+          </Panel>
 
           <div className="flex flex-wrap gap-2">
             {RIDE_STATUSES.map((status) => (
               <button
                 key={status}
                 onClick={() => ride.sendStatus(status)}
-                className="px-3 py-2 rounded-xl border border-border text-xs font-bold hover:border-primary hover:text-primary transition"
+                className="chip transition-all hover:border-primary/50 hover:text-primary"
               >
                 {STATUS_LABEL[status]}
               </button>
             ))}
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-            <div className="max-h-48 overflow-y-auto space-y-2">
+          <Panel>
+            <PanelTitle icon={<MessageSquare size={13} strokeWidth={2.6} />}>Chat</PanelTitle>
+
+            <div className="mb-3 max-h-48 space-y-2 overflow-y-auto">
               {ride.messages.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No messages yet.</p>
+                <p className="py-4 text-center text-xs text-muted-foreground">No messages yet.</p>
               ) : (
                 ride.messages.map((m) => (
-                  <div key={m.id} className="text-xs">
+                  <div key={m.id} className="text-xs leading-relaxed">
                     <span className="font-bold text-primary">{m.nickname}: </span>
-                    <span>{m.kind === "status" ? STATUS_LABEL[m.body as RideStatusCode] ?? m.body : m.body}</span>
+                    <span>
+                      {m.kind === "status"
+                        ? (STATUS_LABEL[m.body as RideStatusCode] ?? m.body)
+                        : m.body}
+                    </span>
                   </div>
                 ))
               )}
@@ -267,32 +294,26 @@ export function GroupRideClient({
                 onChange={(e) => setChatDraft(e.target.value)}
                 placeholder="Message the group…"
                 maxLength={200}
-                className="flex-1 h-11 px-3 rounded-xl border border-border bg-background text-sm"
+                className="field flex-1 py-2.5"
               />
-              <button
-                type="submit"
-                className="px-4 h-11 rounded-xl bg-primary text-primary-foreground text-sm font-bold"
-              >
-                Send
+              <button type="submit" className="btn-primary h-11 w-11 shrink-0" aria-label="Send">
+                <Send size={16} strokeWidth={2.6} />
               </button>
             </form>
-          </div>
+          </Panel>
 
           <LeaderboardPanel groupId={group.id} />
 
           <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={handleLeave}
-              disabled={busy}
-              className="h-12 rounded-xl border border-border text-xs font-bold uppercase tracking-widest disabled:opacity-50"
-            >
+            <button onClick={handleLeave} disabled={busy} className="btn-ghost h-12">
+              <LogOut size={14} strokeWidth={2.6} />
               Leave ride
             </button>
             {group.ownerId === userId && (
               <button
                 onClick={handleEnd}
                 disabled={busy}
-                className="h-12 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+                className="btn h-12 border border-destructive/25 bg-destructive/10 text-destructive hover:bg-destructive/20"
               >
                 End for everyone
               </button>
@@ -300,44 +321,24 @@ export function GroupRideClient({
           </div>
         </>
       )}
-    </div>
+    </PageShell>
   );
 }
 
 function ConnectionBadge({ state }: { state: string }) {
-  const style =
-    state === "connected"
-      ? "bg-green-500/10 text-green-400 border-green-500/20"
-      : state === "degraded"
-      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-      : state === "connecting"
-      ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-      : "bg-muted text-muted-foreground border-border";
-
   // "degraded" means relay-only, which is fully functional — hence "Relay"
   // rather than anything that reads as an error.
-  const label =
-    state === "connected"
-      ? "● Direct"
-      : state === "degraded"
-      ? "● Relay"
-      : state === "connecting"
-      ? "● Connecting"
-      : "● Offline";
+  const map: Record<string, { tone: Tone; label: string; pulse: boolean }> = {
+    connected: { tone: "lime", label: "Direct", pulse: false },
+    degraded: { tone: "amber", label: "Relay", pulse: false },
+    connecting: { tone: "cyan", label: "Connecting", pulse: true },
+  };
+  const view = map[state] ?? { tone: "default" as Tone, label: "Offline", pulse: false };
 
   return (
-    <span className={`shrink-0 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${style}`}>
-      {label}
-    </span>
-  );
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
-      <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{title}</h2>
-      {children}
-    </div>
+    <Badge tone={view.tone} dot pulse={view.pulse}>
+      {view.label}
+    </Badge>
   );
 }
 
@@ -346,22 +347,22 @@ function Field({
   value,
   onChange,
   placeholder,
+  className,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  className?: string;
 }) {
   return (
-    <div className="space-y-1">
-      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-        {label}
-      </label>
+    <div className="space-y-1.5">
+      <label className="label-micro">{label}</label>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-11 px-3 rounded-xl border border-border bg-background text-sm"
+        className={`field py-2.5 ${className ?? ""}`}
       />
     </div>
   );
@@ -369,12 +370,12 @@ function Field({
 
 function Notice({ title, body }: { title: string; body: string }) {
   return (
-    <div className="max-w-screen-lg mx-auto px-4 py-6 pb-24">
-      <div className="text-center py-20 rounded-3xl border-2 border-dashed border-border/50">
-        <div className="text-5xl mb-4 opacity-20">🛰</div>
-        <p className="font-bold mb-2">{title}</p>
-        <p className="text-xs text-muted-foreground max-w-sm mx-auto">{body}</p>
-      </div>
-    </div>
+    <PageShell>
+      <EmptyState
+        icon={<Radio size={44} strokeWidth={1.5} />}
+        title={title}
+        description={body}
+      />
+    </PageShell>
   );
 }

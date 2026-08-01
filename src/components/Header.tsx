@@ -2,64 +2,90 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import { LogOut, Settings } from "lucide-react";
 import { useLanguage } from "./LanguageProvider";
+import { cn } from "@/lib/utils";
+
+const LANGS = ["en", "ru", "uk"] as const;
 
 export function Header() {
   const { t, lang, setLang } = useLanguage();
   const { data: session, status } = useSession();
 
   return (
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border shadow-sm">
-      <div className="max-w-screen-lg mx-auto px-4 py-3 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group">
-          <img src="/icon-192x192.png" alt="MotoLog" className="w-8 h-8 rounded-lg group-hover:scale-105 transition-transform" />
-          <span className="font-black text-lg tracking-tight uppercase group-hover:text-primary transition-colors">MotoLog</span>
-        </Link>
+    <header className="sticky top-0 z-40">
+      {/* Hairline of accent light along the very top edge — the one piece of
+          chrome that is pure decoration, and the cheapest signal that this is
+          an instrument panel and not a document. */}
+      <div
+        aria-hidden
+        className="h-px w-full bg-gradient-to-r from-transparent via-primary/70 to-transparent"
+      />
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-            {(["en", "ru", "uk"] as const).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLang(l)}
-                className={`text-[10px] px-2 py-1 rounded-md font-bold transition-all ${
-                  lang === l
-                    ? "bg-background shadow-sm text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
+      <div className="glass border-b [border-color:hsl(var(--hairline))]">
+        <div className="mx-auto flex max-w-screen-lg items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <Link href="/" className="group flex items-center gap-3">
+            <span className="relative flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 ring-1 ring-inset ring-primary/30 transition-all group-hover:bg-primary/20 group-hover:shadow-glow">
+              <img
+                src="/icon-192x192.png"
+                alt=""
+                className="h-6 w-6 rounded-[5px] object-cover"
+              />
+            </span>
+            <span className="flex flex-col leading-none">
+              <span className="font-display text-base font-black uppercase tracking-[0.16em] transition-colors group-hover:text-primary">
+                Moto<span className="text-primary">Log</span>
+              </span>
+              <span className="mt-1 hidden text-[8px] font-bold uppercase tracking-[0.34em] text-muted-foreground sm:block">
+                Ride telemetry
+              </span>
+            </span>
+          </Link>
 
-          {status === "loading" ? (
-            <div className="w-20 h-9 bg-muted animate-pulse rounded-md" />
-          ) : session ? (
-            <div className="flex items-center gap-2">
-              <Link
-                href="/settings"
-                className="w-8 h-8 flex items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
-                title={t("settings") || "Settings"}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-              </Link>
-              <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
-                className="w-8 h-8 flex items-center justify-center rounded-xl bg-muted text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                title={t("logout") || "Logout"}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
-              </button>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center rounded-full border p-0.5 [border-color:hsl(var(--hairline))]">
+              {LANGS.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  aria-pressed={lang === l}
+                  className={cn(
+                    "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] transition-all",
+                    lang === l
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {l}
+                </button>
+              ))}
             </div>
-          ) : (
-            <Link
-              href="/login"
-              className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-bold text-xs hover:bg-primary/90 transition-colors"
-            >
-              Log in
-            </Link>
-          )}
+
+            {status === "loading" ? (
+              <div className="h-9 w-9 animate-pulse rounded-md bg-muted" />
+            ) : session ? (
+              <div className="flex items-center gap-1.5">
+                <Link
+                  href="/settings"
+                  title={t("settings")}
+                  className="flex h-9 w-9 items-center justify-center rounded-md border text-muted-foreground transition-all hover:border-primary/50 hover:text-primary [border-color:hsl(var(--hairline))]"
+                >
+                  <Settings size={16} strokeWidth={2.4} />
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  title={t("logout")}
+                  className="flex h-9 w-9 items-center justify-center rounded-md border text-muted-foreground transition-all hover:border-destructive/50 hover:text-destructive [border-color:hsl(var(--hairline))]"
+                >
+                  <LogOut size={16} strokeWidth={2.4} />
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" className="btn-primary px-4 py-2.5">
+                {t("login")}
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </header>

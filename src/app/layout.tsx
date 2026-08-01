@@ -1,19 +1,45 @@
 import React from "react";
 import type { Metadata } from "next";
-import { Inter, Bebas_Neue, JetBrains_Mono } from "next/font/google";
+import { Inter, Unbounded, Bebas_Neue, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Navigation } from "@/components/Navigation";
+import { Header } from "@/components/Header";
+import { OfflineSyncProvider } from "@/components/OfflineSyncProvider";
 import { getOptionalAuthUser } from "@/server/auth/guards";
 import { userRepository } from "@/server/repositories/userRepository";
 
-const inter = Inter({ subsets: ["latin", "cyrillic"] });
-const bebasNeue = Bebas_Neue({ weight: "400", subsets: ["latin"], variable: "--font-bebas" });
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin", "cyrillic"], variable: "--font-mono" });
+// Every face here carries Cyrillic: the app ships English, Russian and
+// Ukrainian, and a display font without Cyrillic would silently fall back
+// mid-heading and break the look on two of the three locales.
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const unbounded = Unbounded({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
+const bebasNeue = Bebas_Neue({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-bebas",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "MotoLog",
-  description: "Personal motorcycle maintenance and expenses diary",
+  title: "MotoLog — ride telemetry & garage",
+  description: "Personal motorcycle maintenance, expenses and ride telemetry",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -23,15 +49,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#000000",
+  themeColor: "#05070B",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
 };
-
-import { Header } from "@/components/Header";
-import { OfflineSyncProvider } from "@/components/OfflineSyncProvider";
 
 export default async function RootLayout({
   children,
@@ -54,15 +77,19 @@ export default async function RootLayout({
   const isJournal = theme === "journal";
 
   return (
-    <html lang="en" className={`${theme} ${accent} ${isJournal ? "theme-journal" : ""}`}>
-      <body className={`${inter.className} ${bebasNeue.variable} ${jetbrainsMono.variable}`}>
+    <html
+      lang="en"
+      className={`${theme} ${accent} ${isJournal ? "theme-journal" : ""}`}
+      suppressHydrationWarning
+    >
+      <body
+        className={`${inter.variable} ${unbounded.variable} ${jetbrainsMono.variable} ${bebasNeue.variable} font-sans`}
+      >
         <Providers initialTheme={theme} initialAccent={accent}>
           <OfflineSyncProvider>
-            <div className="flex flex-col min-h-screen pb-20">
+            <div className="relative flex min-h-screen flex-col">
               <Header />
-              <main className="flex-1">
-                {children}
-              </main>
+              <main className="flex-1 pb-28">{children}</main>
               <Navigation />
             </div>
           </OfflineSyncProvider>

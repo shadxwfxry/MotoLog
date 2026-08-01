@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ArrowRight, History, Radio, Route, Users } from "lucide-react";
 import { RideRecorder } from "@/features/trips/components/RideRecorder";
+import { useLanguage } from "@/components/LanguageProvider";
 import {
   formatDate,
   formatDistance,
@@ -10,6 +12,8 @@ import {
   formatSpeed,
   type FormatPrefs,
 } from "@/shared/lib/format";
+import { EmptyState, MiniStat, Panel, PageHeader, PageShell } from "@/shared/ui";
+import { cn } from "@/lib/utils";
 
 interface TripSummary {
   id: string;
@@ -29,6 +33,7 @@ interface Props {
 }
 
 export function RidesClient({ vehicles, trips, prefs }: Props) {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<"record" | "history">("record");
 
   const vehicleName = (id: string) => {
@@ -36,28 +41,41 @@ export function RidesClient({ vehicles, trips, prefs }: Props) {
     return v ? `${v.make} ${v.model}` : "—";
   };
 
-  return (
-    <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6 pb-24">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight uppercase">Rides</h1>
-        <Link
-          href="/rides/group"
-          className="px-4 py-2 rounded-xl bg-muted border border-border text-xs font-black uppercase tracking-wider hover:border-primary hover:text-primary transition"
-        >
-          🛰 Group
-        </Link>
-      </div>
+  const tabs = [
+    { value: "record", label: t("record_ride"), Icon: Radio },
+    { value: "history", label: `${t("ride_history")} · ${trips.length}`, Icon: History },
+  ] as const;
 
-      <div className="flex rounded-xl overflow-hidden border border-border">
-        {(["record", "history"] as const).map((value) => (
+  return (
+    <PageShell>
+      <PageHeader
+        eyebrow={t("telemetry")}
+        title={t("rides")}
+        action={
+          <Link href="/rides/group" className="btn-ghost h-11 px-5">
+            <Users size={15} strokeWidth={2.6} />
+            {t("group_ride")}
+          </Link>
+        }
+      />
+
+      {/* Segmented control: a single framed track with a sliding active state,
+          rather than two buttons that happen to sit next to each other. */}
+      <div className="flex rounded-lg border p-1 [border-color:hsl(var(--hairline))]">
+        {tabs.map(({ value, label, Icon }) => (
           <button
             key={value}
             onClick={() => setTab(value)}
-            className={`flex-1 py-2.5 text-xs font-black uppercase tracking-wider transition-colors ${
-              tab === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-            }`}
+            aria-pressed={tab === value}
+            className={cn(
+              "flex flex-1 items-center justify-center gap-2 rounded-md py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] transition-all duration-300",
+              tab === value
+                ? "bg-primary text-primary-foreground shadow-[0_6px_18px_-8px_hsl(var(--primary))]"
+                : "text-muted-foreground hover:text-foreground",
+            )}
           >
-            {value === "record" ? "🛰 Record" : `📜 History (${trips.length})`}
+            <Icon size={14} strokeWidth={2.6} />
+            {label}
           </button>
         ))}
       </div>
@@ -65,50 +83,61 @@ export function RidesClient({ vehicles, trips, prefs }: Props) {
       {tab === "record" ? (
         <RideRecorder vehicles={vehicles} prefs={prefs} />
       ) : trips.length === 0 ? (
-        <div className="text-center py-20 rounded-3xl border-2 border-dashed border-border/50">
-          <div className="text-6xl mb-4 opacity-20">🛰</div>
-          <p className="text-sm text-muted-foreground">No rides recorded yet.</p>
-        </div>
+        <EmptyState
+          icon={<Route size={44} strokeWidth={1.5} />}
+          title={t("no_rides_yet")}
+          description={t("no_rides_desc")}
+        />
       ) : (
         <div className="grid gap-3">
-          {trips.map((trip) => (
-            <Link
+          {trips.map((trip, index) => (
+            <Panel
               key={trip.id}
-              href={`/rides/${trip.id}`}
-              className="rounded-2xl border border-border bg-card p-5 hover:border-primary/50 transition-all"
+              interactive
+              padding="none"
+              className="animate-rise-in"
+              style={{ animationDelay: `${Math.min(index, 8) * 50}ms` }}
             >
-              <div className="flex justify-between items-start gap-3 mb-3">
-                <div className="min-w-0">
-                  <p className="font-bold truncate">
-                    {trip.title || `Ride · ${vehicleName(trip.vehicleId)}`}
-                  </p>
-                  <p suppressHydrationWarning className="text-xs text-muted-foreground">
-                    {formatDate(trip.startedAt, prefs)}
-                  </p>
-                </div>
-                <span className="text-lg font-black text-primary shrink-0">
-                  {formatDistance(trip.distanceM / 1000, prefs, 1)}
-                </span>
-              </div>
+              <Link href={`/rides/${trip.id}`} className="group block p-5">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-display text-base font-bold uppercase tracking-tight">
+                      {trip.title || vehicleName(trip.vehicleId)}
+                    </p>
+                    <p
+                      suppressHydrationWarning
+                      className="num mt-0.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
+                    >
+                      {formatDate(trip.startedAt, prefs)}
+                    </p>
+                  </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <Stat label="Time" value={formatDuration(trip.durationS)} />
-                <Stat label="Avg" value={formatSpeed(trip.avgSpeedKph, prefs)} />
-                <Stat label="Top" value={formatSpeed(trip.maxSpeedKph, prefs)} />
-              </div>
-            </Link>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="num text-2xl font-black leading-none text-primary">
+                      {formatDistance(trip.distanceM / 1000, prefs, 1)}
+                    </span>
+                    <ArrowRight
+                      size={16}
+                      strokeWidth={2.6}
+                      className="text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <MiniStat label={t("duration")} value={formatDuration(trip.durationS)} />
+                  <MiniStat label={t("avg_speed")} value={formatSpeed(trip.avgSpeedKph, prefs)} />
+                  <MiniStat
+                    label={t("top_speed")}
+                    value={formatSpeed(trip.maxSpeedKph, prefs)}
+                    tone="primary"
+                  />
+                </div>
+              </Link>
+            </Panel>
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-muted/40 py-2">
-      <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">{label}</p>
-      <p className="text-sm font-bold">{value}</p>
-    </div>
+    </PageShell>
   );
 }

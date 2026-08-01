@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft, Fuel, History, Wrench, Zap } from "lucide-react";
 import { getOptionalAuthUser } from "@/server/auth/guards";
 import { vehicleRepository } from "@/server/repositories/vehicleRepository";
 import { statsRepository } from "@/server/repositories/statsRepository";
@@ -18,8 +19,8 @@ import { VehicleActions } from "@/components/VehicleActions";
 import { LogActions } from "@/components/LogActions";
 import { ExportPdfButton } from "@/components/ExportPdfButton";
 import { QrCodeButton } from "@/components/QrCodeButton";
-
 import { SpecsSection } from "@/components/SpecsSection";
+import { Badge, EmptyState, Panel, PanelTitle, PageShell, StatTile } from "@/shared/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -52,49 +53,70 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
     .slice(0, LOG_PAGE_SIZE);
 
   return (
-    <div className="max-w-screen-lg mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/garage" className="p-2 rounded-xl bg-muted hover:bg-muted/80 transition">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    <PageShell>
+      {/* ── Masthead ── */}
+      <div className="space-y-5">
+        <Link
+          href="/garage"
+          className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary"
+        >
+          <ChevronLeft size={14} strokeWidth={2.8} />
+          Garage
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">{vehicle.make} {vehicle.model}</h1>
+
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-black uppercase leading-none tracking-tight sm:text-4xl">
+              {vehicle.make} <span className="text-primary text-glow">{vehicle.model}</span>
+            </h1>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Badge tone="cyan">{vehicle.year}</Badge>
+              {vehicle.engineDisplacement && (
+                <Badge tone="primary">{vehicle.engineDisplacement} cc</Badge>
+              )}
+              {vehicle.power && <Badge tone="lime">{vehicle.power} hp</Badge>}
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Left Column: Info & Forms */}
-        <div className="md:col-span-1 space-y-6">
-          <div className="rounded-2xl border border-border bg-card p-6 space-y-4 shadow-sm">
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm px-3 py-1 rounded-full bg-blue-500/15 text-blue-400 font-medium">{vehicle.year}</span>
-              {vehicle.engineDisplacement && <span className="text-sm px-3 py-1 rounded-full bg-primary/15 text-primary font-medium">{vehicle.engineDisplacement} cc</span>}
-              {vehicle.power && <span className="text-sm px-3 py-1 rounded-full bg-green-500/15 text-green-400 font-medium">{vehicle.power} hp</span>}
-            </div>
-            
-            <div className="space-y-3 pt-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Odometer</span>
-                <span className="font-bold">{formatDistance(currentOdometer, prefs)}</span>
-              </div>
-              {consumption.per100 !== null && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Consumption</span>
-                  <span className="font-bold text-primary">
-                    {formatConsumption(consumption.per100, prefs)}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Maintenance</span>
-                <span className="font-bold text-orange-400">
-                  {formatCurrency(maintenanceTotal, prefs)}
-                </span>
-              </div>
-            </div>
+      {/* ── Headline readouts ── */}
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <StatTile
+          label="Odometer"
+          value={formatDistance(currentOdometer, prefs)}
+          tone="primary"
+        />
+        <StatTile
+          label="Consumption"
+          value={consumption.per100 !== null ? formatConsumption(consumption.per100, prefs) : "—"}
+          tone="lime"
+        />
+        <StatTile
+          label="Maintenance"
+          value={formatCurrency(maintenanceTotal, prefs)}
+          tone="amber"
+        />
+      </div>
 
-            <div className="pt-4 border-t border-border space-y-2">
+      <div className="grid gap-5 lg:grid-cols-3">
+        {/* ── Left rail ── */}
+        <div className="space-y-5 lg:col-span-1">
+          <Panel>
+            <PanelTitle icon={<Zap size={13} strokeWidth={2.6} />}>Quick actions</PanelTitle>
+            <div className="space-y-2">
+              <AddRefuelForm vehicleId={vehicle.id} />
+              <AddMaintenanceForm vehicleId={vehicle.id} />
+            </div>
+          </Panel>
+
+          <Panel>
+            <PanelTitle icon={<Wrench size={13} strokeWidth={2.6} />}>Manage</PanelTitle>
+            {/* Destructive actions come last. Previously "Danger zone" sat in
+                the middle of the rail with Export and QR below it, which read
+                as though those two were also destructive. */}
+            <div className="space-y-2">
               <EditVehicleForm vehicleId={vehicle.id} defaultValues={vehicle} />
-              <VehicleActions vehicleId={vehicle.id} />
-
               <ExportPdfButton
                 vehicle={vehicle}
                 refuels={serializeForClient(refuelPage.items)}
@@ -105,101 +127,125 @@ export default async function VehicleDetailPage({ params }: { params: { id: stri
                   avgCons: consumption.per100,
                 }}
               />
-
-              <QrCodeButton vehicleId={vehicle.id} vehicleName={`${vehicle.make} ${vehicle.model}`} />
+              <QrCodeButton
+                vehicleId={vehicle.id}
+                vehicleName={`${vehicle.make} ${vehicle.model}`}
+              />
+              <VehicleActions vehicleId={vehicle.id} />
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h3 className="text-sm font-bold mb-4 uppercase tracking-wider text-muted-foreground">Quick Actions</h3>
-            <div className="space-y-2">
-              <AddRefuelForm vehicleId={vehicle.id} />
-              <AddMaintenanceForm vehicleId={vehicle.id} />
-            </div>
-          </div>
+          </Panel>
 
           <SpecsSection vehicleId={vehicle.id} initialSpecs={vehicle.specs} />
         </div>
 
-        {/* Right Column: Logs & Reminders */}
-        <div className="md:col-span-2 space-y-6">
-          <RemindersSection
-            vehicleId={vehicle.id}
-            reminders={vehicle.plannedMaintenances}
-            currentOdometer={currentOdometer}
-          />
+        {/* ── Right rail ── */}
+        <div className="space-y-5 lg:col-span-2">
+          <Panel>
+            <RemindersSection
+              vehicleId={vehicle.id}
+              reminders={vehicle.plannedMaintenances}
+              currentOdometer={currentOdometer}
+            />
+          </Panel>
 
-          <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-            <div className="px-6 py-4 border-b border-border bg-muted/30">
-              <h3 className="font-bold">Recent History</h3>
+          <Panel padding="none">
+            <div className="px-5 pt-5 sm:px-6 sm:pt-6">
+              <PanelTitle icon={<History size={13} strokeWidth={2.6} />}>
+                Recent history
+              </PanelTitle>
             </div>
-            <div className="p-0">
-              <div className="divide-y divide-border">
+
+            {history.length === 0 ? (
+              <div className="px-6 pb-8">
+                <EmptyState
+                  icon={<History size={40} strokeWidth={1.5} />}
+                  title="No records yet"
+                  description="Log a refuel or a service and it will show up here."
+                />
+              </div>
+            ) : (
+              <ul className="divide-y [&>li]:border-[hsl(var(--hairline))]">
                 {/*
                   One chronological feed. `kind` is a discriminated union, so
                   each branch is narrowed properly — the previous version cast
                   every field access to `any` to read type-specific columns.
                 */}
-                {history.map((log) => (
-                  <div
-                    key={log.id}
-                    className={`px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between hover:bg-muted/10 transition ${
-                      log.kind === "maintenance" ? "border-l-4 border-l-orange-500/50" : ""
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{log.kind === "refuel" ? "⛽" : "🔧"}</span>
-                        <span className="font-medium text-sm">
-                          {log.kind === "refuel" ? (log.stationName ?? "Fuel Station") : log.type}
-                        </span>
-                        {log.kind === "refuel" && log.fuelGrade && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted uppercase">
-                            {log.fuelGrade}
-                          </span>
-                        )}
-                        {log.kind === "maintenance" && (
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded uppercase ${
-                              log.category === "repair"
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-blue-500/20 text-blue-400"
-                            }`}
-                          >
-                            {log.category}
-                          </span>
-                        )}
-                      </div>
-                      <p suppressHydrationWarning className="text-xs text-muted-foreground ml-7">
-                        {formatDate(log.date, prefs)} · {formatDistance(log.odometer, prefs)}
-                      </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="text-right">
-                        <p className={`font-bold text-sm ${log.kind === "refuel" ? "text-primary" : ""}`}>
-                          {formatCurrency(log.cost, prefs)}
-                        </p>
-                        {log.kind === "refuel" && (
-                          <p className="text-[10px] text-muted-foreground">
-                            {log.liters} L · {log.pricePerLiter ?? "—"}
-                          </p>
-                        )}
-                      </div>
-                      <LogActions logId={log.id} type={log.kind} isPublic={log.isPublic} />
-                    </div>
-                  </div>
-                ))}
+                {history.map((log) => {
+                  const isRefuel = log.kind === "refuel";
 
-                {history.length === 0 && (
-                  <div className="px-6 py-12 text-center text-muted-foreground text-sm">
-                    No history records yet.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+                  return (
+                    <li
+                      key={log.id}
+                      className="flex items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-foreground/[0.03] sm:px-6"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border ${
+                            isRefuel
+                              ? "border-primary/30 bg-primary/10 text-primary"
+                              : "border-signal-cyan/30 bg-signal-cyan/10 text-signal-cyan"
+                          }`}
+                        >
+                          {isRefuel ? (
+                            <Fuel size={15} strokeWidth={2.4} />
+                          ) : (
+                            <Wrench size={15} strokeWidth={2.4} />
+                          )}
+                        </span>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate text-sm font-semibold">
+                              {log.kind === "refuel"
+                                ? (log.stationName ?? "Fuel station")
+                                : log.type}
+                            </span>
+                            {log.kind === "refuel" && log.fuelGrade && (
+                              <Badge tone="default" className="px-2 py-0.5">
+                                {log.fuelGrade}
+                              </Badge>
+                            )}
+                            {log.kind === "maintenance" && (
+                              <Badge
+                                tone={log.category === "repair" ? "rose" : "cyan"}
+                                className="px-2 py-0.5"
+                              >
+                                {log.category}
+                              </Badge>
+                            )}
+                          </div>
+                          <p
+                            suppressHydrationWarning
+                            className="num mt-0.5 truncate text-[11px] text-muted-foreground"
+                          >
+                            {formatDate(log.date, prefs)} · {formatDistance(log.odometer, prefs)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-3">
+                        <div className="text-right">
+                          <p
+                            className={`num text-sm font-bold ${isRefuel ? "text-primary" : ""}`}
+                          >
+                            {formatCurrency(log.cost, prefs)}
+                          </p>
+                          {log.kind === "refuel" && (
+                            <p className="num text-[10px] text-muted-foreground">
+                              {log.liters} L · {log.pricePerLiter ?? "—"}
+                            </p>
+                          )}
+                        </div>
+                        <LogActions logId={log.id} type={log.kind} isPublic={log.isPublic} />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Panel>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
