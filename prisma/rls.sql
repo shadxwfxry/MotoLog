@@ -13,6 +13,11 @@
 -- designed to be public — it ships in client bundles).
 --
 -- Apply with:  psql "$DIRECT_URL" -f prisma/rls.sql
+-- Verify with: node scripts/check-rls.mjs
+--
+-- This is not optional hardening you can defer. Until it is applied, Supabase's
+-- Security Advisor reports every table as "RLS Disabled in Public" and the
+-- anon key really does read the whole database through PostgREST.
 
 ALTER TABLE "User"               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "UserSettings"       ENABLE ROW LEVEL SECURITY;
@@ -25,6 +30,12 @@ ALTER TABLE "Trip"               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "RideGroup"          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "RideGroupMember"    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "Friendship"         ENABLE ROW LEVEL SECURITY;
+
+-- Prisma's own bookkeeping table. It holds no user data, but it is in `public`
+-- like everything else: the advisor flags it, and it hands out the migration
+-- history to anyone with the anon key. Prisma writes it as owner, so RLS here
+-- costs nothing.
+ALTER TABLE "_prisma_migrations" ENABLE ROW LEVEL SECURITY;
 
 -- Belt and braces: revoke the grants Supabase hands the public roles by
 -- default, so a future permissive policy cannot silently open these up.
@@ -39,3 +50,4 @@ REVOKE ALL ON "Trip"               FROM anon, authenticated;
 REVOKE ALL ON "RideGroup"          FROM anon, authenticated;
 REVOKE ALL ON "RideGroupMember"    FROM anon, authenticated;
 REVOKE ALL ON "Friendship"         FROM anon, authenticated;
+REVOKE ALL ON "_prisma_migrations" FROM anon, authenticated;
